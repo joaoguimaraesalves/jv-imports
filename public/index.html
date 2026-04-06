@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JV Imports - Gestão</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg-dark: #0F172A; --bg-panel: #1E293B; --bg-sidebar: #0B1120; --text-main: #F8FAFC; --text-muted: #94A3B8; --color-green: #10B981; --color-red: #EF4444; --color-blue: #3B82F6; --color-purple: #A855F7; --color-orange: #F59E0B; --border-color: #334155; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { display: flex; background-color: var(--bg-dark); color: var(--text-main); height: 100vh; overflow: hidden; }
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        
+        /* LOGO DA JV IMPORTS */
+        .logo-area { padding: 25px 20px; font-weight: 900; font-size: 1.5rem; border-bottom: 1px solid var(--border-color); color: var(--color-green); text-align: center; letter-spacing: 1px; text-transform: uppercase;}
+        
+        .menu-list { list-style: none; margin-top: 20px; }
+        .menu-list li { padding: 15px 20px; cursor: pointer; color: var(--text-muted); transition: 0.2s; }
+        .menu-list li:hover { color: var(--text-main); }
+        .menu-list li.active { background-color: #064E3B; color: var(--color-green); border-left: 4px solid var(--color-green); }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .tela { display: none; } .tela.active { display: block; }
+        .btn-green { background-color: var(--color-green); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-blue { background-color: var(--color-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-red { background-color: var(--color-red); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-gray { background-color: transparent; color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-excluir { background-color: transparent; color: var(--color-red); border: 1px solid var(--color-red); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .btn-excluir:hover { background-color: var(--color-red); color: white; }
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { border-radius: 8px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; color: white; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 500; }
+        .card-value { font-size: 1.6rem; font-weight: bold; margin-top: 10px; }
+        .bg-green { background-color: var(--color-green); } .bg-red { background-color: var(--color-red); } .bg-blue { background-color: var(--color-blue); } .bg-purple { background-color: var(--color-purple); } .bg-orange { background-color: var(--color-orange); }
+        .chart-container { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: var(--bg-panel); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #0B1120; color: var(--text-muted); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; width: 400px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .modal-content h3 { margin-bottom: 20px; color: var(--text-main); font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; } .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); background-color: var(--bg-dark); color: white; font-size: 1rem; outline: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo-area">JV Imports</div>
+        <ul class="menu-list">
+            <li id="menu-dashboard" class="active" onclick="mudarTela('dashboard')">❖ Dashboard</li>
+            <li id="menu-produtos" onclick="mudarTela('produtos')">📦 Estoque da Loja</li>
+            <li id="menu-vendas" onclick="mudarTela('vendas')">🛒 Histórico de Vendas</li>
+            <li id="menu-saidas" onclick="mudarTela('saidas')">📤 Gastos e Despesas</li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div id="tela-dashboard" class="tela active">
+            <div class="header">
+                <h2>Dashboard JV Imports</h2>
+                <button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda Rápida</button>
+            </div>
+            <div class="chart-container"><canvas id="graficoEvolucao" height="80"></canvas></div>
+            <div class="cards-grid">
+                <div class="card bg-green"><div class="card-header"><span>Lucro Líquido</span></div><div class="card-value" id="val-lucro">R$ 0,00</div></div>
+                <div class="card bg-blue"><div class="card-header"><span>Total em Vendas</span></div><div class="card-value" id="val-vendas">R$ 0,00</div></div>
+                <div class="card bg-red"><div class="card-header"><span>Saídas/Gastos</span></div><div class="card-value" id="val-saidas">R$ 0,00</div></div>
+                <div class="card bg-purple"><div class="card-header"><span>Qtd. Vendida</span></div><div class="card-value" id="val-qtd">0</div></div>
+                <div class="card bg-orange"><div class="card-header"><span>Ticket Médio</span></div><div class="card-value" id="val-ticket">R$ 0,00</div></div>
+                <div class="card bg-red"><div class="card-header"><span>Custos Totais</span></div><div class="card-value" id="val-custos">R$ 0,00</div></div>
+                <div class="card bg-green"><div class="card-header"><span>Margem</span></div><div class="card-value" id="val-margem">0.0%</div></div>
+            </div>
+        </div>
+
+        <div id="tela-produtos" class="tela">
+            <div class="header"><h2>Estoque da Loja</h2><button class="btn-blue" onclick="abrirModal('modal-produto')">+ Cadastrar Produto</button></div>
+            <table><thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>Ações</th></tr></thead><tbody id="lista-produtos"></tbody></table>
+        </div>
+
+        <div id="tela-vendas" class="tela">
+            <div class="header"><h2>Histórico de Vendas</h2><button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda</button></div>
+            <table><thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Valor Recebido</th><th>Lucro da Venda</th><th>Ações</th></tr></thead><tbody id="lista-vendas"></tbody></table>
+        </div>
+
+        <div id="tela-saidas" class="tela">
+            <div class="header"><h2>Controle de Gastos</h2><button class="btn-red" onclick="abrirModal('modal-gasto')">+ Registrar Gasto</button></div>
+            <table><thead><tr><th>Data</th><th>Descrição da Despesa</th><th>Valor Pago</th><th>Ações</th></tr></thead><tbody id="lista-saidas"></tbody></table>
+        </div>
+    </main>
+
+    <div id="modal-venda" class="modal-overlay">
+        <div class="modal-content">
+            <form onsubmit="salvarVenda(event)">
+                <h3>Registrar Venda</h3>
+                <div class="form-group">
+                    <label>Selecione o Produto</label>
+                    <select id="venda-produto" required onchange="atualizarTotalVenda()">
+                        <option value="">Carregando produtos...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Quantidade Vendida</label>
+                    <input type="number" id="venda-qtd" min="1" value="1" required oninput="atualizarTotalVenda()">
+                </div>
+                <div class="form-group">
+                    <label>Valor Total Cobrado (R$)</label>
+                    <input type="number" id="venda-valor" step="0.01" required>
+                    <small style="color:var(--text-muted); font-size:0.8rem;">Calculado automaticamente, mas você pode dar descontos.</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-gray" onclick="fecharModal('modal-venda')">Cancelar</button>
+                    <button type="submit" class="btn-green">Salvar Venda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-produto" class="modal-overlay">
+        <div class="modal-content"><form onsubmit="salvarProduto(event)"><h3>Cadastrar Produto</h3>
+            <div class="form-group"><label>Nome do Produto</label><input type="text" id="prod-nome" required placeholder="Ex: Fone Bluetooth"></div>
+            <div class="form-group"><label>Custo do Produto (Quanto você pagou?)</label><input type="number" id="prod-custo" step="0.01" required placeholder="Ex: 50.00"></div>
+            <div class="form-group"><label>Preço de Venda Final (R$)</label><input type="number" id="prod-preco" step="0.01" required placeholder="Ex: 120.00"></div>
+            <div class="form-group"><label>Quantidade Inicial no Estoque</label><input type="number" id="prod-qtd" required placeholder="Ex: 10"></div>
+            <div class="modal-actions"><button type="button" class="btn-gray" onclick="fecharModal('modal-produto')">Cancelar</button><button type="submit" class="btn-blue">Salvar Produto</button></div>
+        </form></div>
+    </div>
+
+    <div id="modal-gasto" class="modal-overlay">
+        <div class="modal-content"><form onsubmit="salvarGasto(event)"><h3>Registrar Gasto</h3>
+            <div class="form-group"><label>Descrição</label><input type="text" id="gasto-desc" required></div>
+            <div class="form-group"><label>Valor (R$)</label><input type="number" id="gasto-valor" step="0.01" required></div>
+            <div class="modal-actions"><button type="button" class="btn-gray" onclick="fecharModal('modal-gasto')">Cancelar</button><button type="submit" class="btn-red">Salvar Gasto</button></div>
+        </form></div>
+    </div>
+
+    <script>
+        const formatarMoeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        let meuGrafico; 
+        let produtosEmEstoque = []; // Guarda os produtos na memória para calcular as vendas
+
+        function mudarTela(nomeTela) {
+            document.querySelectorAll('.tela').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.menu-list li').forEach(m => m.classList.remove('active'));
+            document.getElementById(`tela-${nomeTela}`).classList.add('active');
+            document.getElementById(`menu-${nomeTela}`).classList.add('active');
+            
+            if(nomeTela === 'dashboard') { carregarDashboard(); desenharGrafico(); }
+            if(nomeTela === 'produtos') carregarProdutos();
+            if(nomeTela === 'vendas') carregarVendas();
+            if(nomeTela === 'saidas') carregarSaidas();
+        }
+
+        function abrirModal(id) { document.getElementById(id).classList.add('active'); }
+        function fecharModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // --- DASHBOARD E GRÁFICOS ---
+        async function carregarDashboard() {
+            const res = await fetch('/api/dashboard'); const dados = await res.json();
+            document.getElementById('val-lucro').innerText = formatarMoeda(dados.lucro_liquido);
+            document.getElementById('val-saidas').innerText = formatarMoeda(dados.saidas);
+            document.getElementById('val-vendas').innerText = formatarMoeda(dados.total_vendas);
+            document.getElementById('val-qtd').innerText = dados.qtd_vendida;
+            document.getElementById('val-ticket').innerText = formatarMoeda(dados.ticket_medio);
+            document.getElementById('val-custos').innerText = formatarMoeda(dados.custos);
+            document.getElementById('val-margem').innerText = dados.margem + '%';
+        }
+
+        async function desenharGrafico() {
+            const res = await fetch('/api/grafico'); const { vendas, saidas } = await res.json();
+            const dadosPorDia = {};
+            vendas.forEach(v => { const d = v.dia; if(!dadosPorDia[d]) dadosPorDia[d] = { f: 0, c: 0, g: 0 }; dadosPorDia[d].f += v.valor; dadosPorDia[d].c += v.custo; });
+            saidas.forEach(s => { const d = s.dia; if(!dadosPorDia[d]) dadosPorDia[d] = { f: 0, c: 0, g: 0 }; dadosPorDia[d].g += s.valor; });
+            const dias = Object.keys(dadosPorDia).sort();
+            const faturamentos = dias.map(d => dadosPorDia[d].f); const lucros = dias.map(d => dadosPorDia[d].f - dadosPorDia[d].c - dadosPorDia[d].g); const gastos = dias.map(d => dadosPorDia[d].g);
+            
+            if(meuGrafico) meuGrafico.destroy();
+            meuGrafico = new Chart(document.getElementById('graficoEvolucao').getContext('2d'), {
+                type: 'line',
+                data: { labels: dias, datasets: [
+                    { label: 'Faturamento', data: faturamentos, borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true },
+                    { label: 'Lucro Líquido', data: lucros, borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true },
+                    { label: 'Gastos', data: gastos, borderColor: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true }
+                ]},
+                options: { responsive: true, plugins: { legend: { labels: { color: '#F8FAFC' } } }, scales: { x: { ticks: { color: '#94A3B8' } }, y: { ticks: { color: '#94A3B8' } } } }
+            });
+        }
+
+        async function excluirRegistro(tabela, id, funcaoAtualizar) {
+            if(confirm("Tem certeza que deseja excluir? Se for uma venda, o produto voltará para o estoque.")) {
+                await fetch(`/api/${tabela}/${id}`, { method: 'DELETE' });
+                funcaoAtualizar();
+                carregarDashboard(); desenharGrafico();
+                carregarParaDropdown(); // Atualiza estoque na aba de vendas
+            }
+        }
+
+        // --- SISTEMA DE VENDAS INTELIGENTE ---
+        async function carregarParaDropdown() {
+            const res = await fetch('/api/produtos');
+            produtosEmEstoque = await res.json();
+            const select = document.getElementById('venda-produto');
+            select.innerHTML = '<option value="">Selecione um produto...</option>';
+            produtosEmEstoque.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.nome} (Disponível: ${p.quantidade})</option>`;
+            });
+        }
+
+        function abrirModalVenda() {
+            carregarParaDropdown(); // Carrega os produtos sempre que abrir a janela
+            abrirModal('modal-venda');
+        }
+
+        function atualizarTotalVenda() {
+            const produtoId = document.getElementById('venda-produto').value;
+            const qtd = document.getElementById('venda-qtd').value;
+            if(produtoId && qtd) {
+                const prod = produtosEmEstoque.find(p => p.id == produtoId);
+                if(prod) {
+                    document.getElementById('venda-valor').value = (prod.preco * qtd).toFixed(2);
+                }
+            }
+        }
+
+        async function salvarVenda(event) {
+            event.preventDefault(); 
+            const produtoId = document.getElementById('venda-produto').value;
+            const qtd = parseInt(document.getElementById('venda-qtd').value);
+            const valorTotalRecebido = parseFloat(document.getElementById('venda-valor').value);
+            
+            const prod = produtosEmEstoque.find(p => p.id == produtoId);
+            if(!prod) return alert("Por favor, selecione um produto.");
+            if(qtd > prod.quantidade) return alert("Você não tem essa quantidade no estoque!");
+
+            const custoTotal = prod.custo * qtd; // O sistema calcula o custo escondido para o Dashboard
+
+            await fetch('/api/vendas', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                    produto_id: prod.id, 
+                    produto_nome: prod.nome, 
+                    quantidade: qtd, 
+                    valor: valorTotalRecebido, 
+                    custo: custoTotal 
+                }) 
+            });
+            
+            event.target.reset(); fecharModal('modal-venda');
+            carregarDashboard(); desenharGrafico();
+            if(document.getElementById('tela-vendas').classList.contains('active')) carregarVendas();
+            if(document.getElementById('tela-produtos').classList.contains('active')) carregarProdutos();
+        }
+
+        async function carregarVendas() {
+            const res = await fetch('/api/vendas'); const vendas = await res.json();
+            const tbody = document.getElementById('lista-vendas'); tbody.innerHTML = '';
+            vendas.forEach(v => {
+                let lucro = v.valor - v.custo;
+                tbody.innerHTML += `<tr><td>${new Date(v.data).toLocaleDateString('pt-BR')}</td>
+                <td><strong>${v.produto_nome}</strong></td><td>${v.quantidade} un</td>
+                <td style="color: var(--color-blue)">${formatarMoeda(v.valor)}</td><td style="color: var(--color-green)">${formatarMoeda(lucro)}</td>
+                <td><button class="btn-excluir" onclick="excluirRegistro('vendas', ${v.id}, carregarVendas)">Excluir</button></td></tr>`;
+            });
+        }
+
+        // --- PRODUTOS (ESTOQUE) ---
+        async function carregarProdutos() {
+            const res = await fetch('/api/produtos'); const produtos = await res.json();
+            const tbody = document.getElementById('lista-produtos'); tbody.innerHTML = ''; 
+            produtos.forEach(p => tbody.innerHTML += `<tr><td>#${p.id}</td><td>${p.nome}</td>
+            <td>${formatarMoeda(p.custo)}</td><td>${formatarMoeda(p.preco)}</td>
+            <td style="${p.quantidade <= 2 ? 'color: var(--color-red); font-weight:bold;' : ''}">${p.quantidade} un</td>
+            <td><button class="btn-excluir" onclick="excluirRegistro('produtos', ${p.id}, carregarProdutos)">Excluir</button></td></tr>`);
+        }
+
+        async function salvarProduto(event) {
+            event.preventDefault(); 
+            let n = document.getElementById('prod-nome').value, c = document.getElementById('prod-custo').value, p = document.getElementById('prod-preco').value, q = document.getElementById('prod-qtd').value;
+            await fetch('/api/produtos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: n, custo: parseFloat(c), preco: parseFloat(p), quantidade: parseInt(q) }) });
+            event.target.reset(); fecharModal('modal-produto'); carregarProdutos();
+        }
+
+        // --- SAÍDAS (GASTOS) ---
+        async function carregarSaidas() {
+            const res = await fetch('/api/saidas'); const saidas = await res.json();
+            const tbody = document.getElementById('lista-saidas'); tbody.innerHTML = ''; 
+            saidas.forEach(s => tbody.innerHTML += `<tr><td>${new Date(s.data).toLocaleDateString('pt-BR')}</td><td>${s.descricao}</td><td style="color: var(--color-red)">- ${formatarMoeda(s.valor)}</td>
+            <td><button class="btn-excluir" onclick="excluirRegistro('saidas', ${s.id}, carregarSaidas)">Excluir</button></td></tr>`);
+        }
+
+        async function salvarGasto(event) {
+            event.preventDefault(); let d = document.getElementById('gasto-desc').value, v = document.getElementById('gasto-valor').value;
+            await fetch('/api/saidas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ descricao: d, valor: parseFloat(v) }) });
+            event.target.reset(); fecharModal('modal-gasto'); carregarSaidas(); carregarDashboard(); desenharGrafico();
+        }
+
+        // Inicia
+        carregarDashboard(); desenharGrafico(); carregarParaDropdown();
+    </script>
+</body>
+</html>
