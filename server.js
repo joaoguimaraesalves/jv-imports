@@ -85,4 +85,10 @@ app.post('/api/saidas', (req, res) => db.run(`INSERT INTO saidas (descricao, val
 app.delete('/api/saidas/:id', (req, res) => db.run(`DELETE FROM saidas WHERE id = ?`, [req.params.id], () => res.json({ ok: true })));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(port, () => console.log(`🚀 JV Imports rodando! Acesse: http://localhost:${port}`));
+// Exporta o app para os testes automatizados
+module.exports = app;
+
+// Só inicia o servidor se NÃO estiver rodando testes
+if (require.main === module) {
+    app.listen(port, () => console.log(`🚀 JV Imports rodando! Acesse: http://localhost:${port}`));
+}

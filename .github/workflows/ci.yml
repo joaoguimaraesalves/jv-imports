@@ -1,0 +1,28 @@
+name: CI JV Imports
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Baixando o repositório
+      uses: actions/checkout@v3
+
+    - name: Configurando o Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+
+    - name: Instalando Dependências
+      run: npm install
+
+    - name: Executando Linting (Análise Estática)
+      run: npm run lint
+
+    - name: Executando Testes Automatizados
+      run: npm test
