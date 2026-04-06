@@ -1,25 +1,41 @@
-# 📦 JV Imports - Gestão Inteligente
+# JV Imports - Gestão Inteligente
 
+![GitHub Actions/CI](https://github.com/joaoguimaraesalves/jv-imports/actions/workflows/ci.yml/badge.svg)
 ![Versão](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Status](https://img.shields.io/badge/status-ativo-success.svg)
+![Licença](https://img.shields.io/badge/license-MIT-green.svg)
 
-## 🎯 Qual problema estamos resolvendo? (Dor Real)
-Milhares de microempreendedores e lojistas sofrem diariamente com a desorganização financeira e a perda de controle do estoque. O uso de cadernos físicos ou planilhas complexas gera erros de cálculo, furos no inventário e falta de clareza sobre o **Lucro Líquido** real do negócio, levando muitas pequenas empresas à falência.
+## 📌 Nome do Projeto
+JV Imports - Sistema de Gestão Financeira e Estoque
 
-## 💡 A Solução
-A **JV Imports Gestão** é uma aplicação web (GUI) leve e direta, focada em resolver essa dor. Ela unifica o controle de estoque, o histórico de vendas e o registro de despesas diárias em um Dashboard central. O sistema calcula automaticamente a margem de lucro, o ticket médio e atualiza o estoque em tempo real a cada venda.
+## 🎯 Descrição do Problema Real
+Milhares de microempreendedores e pequenos lojistas sofrem diariamente com a desorganização financeira e a perda de controle do estoque. O uso de métodos manuais (cadernos ou planilhas difíceis) gera erros de cálculo, furos no inventário e falta de clareza sobre o Lucro Líquido real do negócio, o que frequentemente leva pequenas empresas à falência por falta de dados precisos.
+
+## 💡 Proposta da Solução
+A aplicação web (GUI) "JV Imports" unifica o controle de estoque, o histórico de vendas e o registro de despesas em um Dashboard centralizado e de fácil uso. O sistema calcula automaticamente o lucro líquido, o ticket médio e atualiza a quantidade de produtos no estoque em tempo real a cada nova venda registrada.
 
 ## 👥 Público-Alvo
-Microempreendedores, revendedores autônomos e pequenos lojistas que precisam de uma ferramenta fácil de usar, sem curvas de aprendizado complexas.
+Microempreendedores, revendedores autônomos e pequenos lojistas que necessitam de uma ferramenta intuitiva para gerir suas vendas e gastos sem curvas de aprendizado complexas.
+
+## ✨ Funcionalidades Principais
+- **Dashboard Financeiro:** Visualização de Lucro Líquido, Vendas, Saídas e Margem.
+- **Controle de Estoque:** Cadastro, listagem e exclusão de produtos com cálculo de custo.
+- **Histórico de Vendas:** Registro de vendas com baixa automática no estoque do produto selecionado.
+- **Controle de Gastos:** Registro de despesas operacionais que impactam o lucro líquido.
+- **Gráfico de Evolução:** Acompanhamento visual de Faturamento vs Lucro vs Gastos.
 
 ## 🛠️ Tecnologias Utilizadas
-* **Backend:** Node.js, Express
-* **Banco de Dados:** SQLite (Local) / PostgreSQL (Nuvem)
-* **Frontend:** HTML5, CSS3, JavaScript Vanilla, Chart.js
-* **Qualidade e CI:** Jest (Testes), ESLint (Linting), GitHub Actions
+- **Linguagem Principal:** JavaScript (Node.js)
+- **Backend:** Express.js
+- **Frontend:** HTML5, CSS3, JS Vanilla, Chart.js
+- **Banco de Dados:** SQLite (Armazenamento local/em arquivo) e PostgreSQL (Pronto para Nuvem)
+- **Qualidade e Automação:** Jest (Testes), ESLint (Linting), GitHub Actions (CI/CD)
 
-## 🚀 Como instalar e executar
+## 📸 Evidência de Funcionamento (Telas da Aplicação)
 
-1. Clone este repositório:
+![Dashboard do Sistema](./dashboard.png)
+
+## ⚙️ Instruções de Instalação
+
+1. Clone este repositório no seu ambiente local:
    ```bash
-   git clone [https://github.com/SEU_USUARIO/jv-imports.git](https://github.com/SEU_USUARIO/jv-imports.git)
+   git clone [https://github.com/joaoguimaraesalves/jv-imports.git](https://github.com/joaoguimaraesalves/jv-imports.git)
