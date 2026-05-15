@@ -213,9 +213,9 @@ async function carregarCotacao() {
   }
 }
 
-// Carrega ao abrir + a cada 5 min
+// Carrega ao abrir + a cada 15 min (backend tem cache de 10 min)
 carregarCotacao();
-setInterval(carregarCotacao, 5 * 60 * 1000);
+setInterval(carregarCotacao, 15 * 60 * 1000);
 
 // Botão de recarregar manual
 document.getElementById('btn-recarregar-cotacao')
