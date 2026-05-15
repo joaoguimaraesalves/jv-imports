@@ -23,6 +23,48 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 
 module.exports = app;
 
+// =============================================
+// Integração com API pública - AwesomeAPI
+// Issue #1 - Cotação de moedas USD/EUR → BRL
+// =============================================
+app.get('/api/cotacao', async (req, res) => {
+  try {
+    const response = await fetch(
+      'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL'
+    );
+
+    if (!response.ok) {
+      return res
+        .status(502)
+        .json({ erro: 'Falha ao consultar API externa', status: response.status });
+    }
+
+    const data = await response.json();
+
+    // Normaliza a resposta para o frontend consumir mais fácil
+    const cotacao = {
+      usd: {
+        valor: parseFloat(data.USDBRL.bid),
+        variacao: parseFloat(data.USDBRL.pctChange),
+        atualizadoEm: data.USDBRL.create_date,
+      },
+      eur: {
+        valor: parseFloat(data.EURBRL.bid),
+        variacao: parseFloat(data.EURBRL.pctChange),
+        atualizadoEm: data.EURBRL.create_date,
+      },
+      fonte: 'AwesomeAPI',
+    };
+
+    res.json(cotacao);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro interno ao buscar cotação', detalhe: err.message });
+  }
+});
+
+
 if (require.main === module) {
-    app.listen(port, () => console.log(`🚀 JV Imports rodando em http://localhost:${port}`));
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
 }
+module.exports = app;

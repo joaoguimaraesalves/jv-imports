@@ -163,3 +163,32 @@ async function carregarProximasContas() {
             </div>`;
     });
 }
+
+async function carregarCotacao() {
+  try {
+    const res = await fetch('/api/cotacao');
+    if (!res.ok) throw new Error('Falha ao buscar cotação');
+    const data = await res.json();
+
+    document.getElementById('cotacao-usd').textContent =
+      'R$ ' + data.usd.valor.toFixed(2);
+    document.getElementById('cotacao-eur').textContent =
+      'R$ ' + data.eur.valor.toFixed(2);
+
+    const variacaoUsd = document.getElementById('variacao-usd');
+    variacaoUsd.textContent = data.usd.variacao.toFixed(2) + '%';
+    variacaoUsd.style.color = data.usd.variacao >= 0 ? 'green' : 'red';
+
+    const variacaoEur = document.getElementById('variacao-eur');
+    variacaoEur.textContent = data.eur.variacao.toFixed(2) + '%';
+    variacaoEur.style.color = data.eur.variacao >= 0 ? 'green' : 'red';
+  } catch (err) {
+    console.error('Erro ao carregar cotação:', err);
+    document.getElementById('cotacao-usd').textContent = 'indisponível';
+    document.getElementById('cotacao-eur').textContent = 'indisponível';
+  }
+}
+
+// Carrega ao abrir a página e a cada 5 minutos
+carregarCotacao();
+setInterval(carregarCotacao, 5 * 60 * 1000);
