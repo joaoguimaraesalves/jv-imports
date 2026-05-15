@@ -21,20 +21,24 @@ app.use('/api/estoque',      require('./routes/estoque')(db));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-module.exports = app;
 
 // =============================================
 // Integração com API pública - AwesomeAPI
 // Issue #1 - Cotação de moedas USD/EUR → BRL
-// Cache em memória para evitar rate limit (HTTP 429)
 // =============================================
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 let cacheCotacao = null;
 let cacheTimestamp = 0;
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+
+function resetarCacheCotacao() {
+  cacheCotacao = null;
+  cacheTimestamp = 0;
+}
 
 app.get('/api/cotacao', async (req, res) => {
-  // Se há cache válido, devolve sem chamar API externa
   const agora = Date.now();
+
+  // Devolve do cache se ainda estiver válido
   if (cacheCotacao && (agora - cacheTimestamp) < CACHE_TTL_MS) {
     return res.json({ ...cacheCotacao, cache: true });
   }
@@ -44,7 +48,7 @@ app.get('/api/cotacao', async (req, res) => {
       'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL'
     );
 
-    // Rate limit da AwesomeAPI: devolve cache antigo se houver
+    // Rate limit da AwesomeAPI
     if (response.status === 429) {
       if (cacheCotacao) {
         return res.json({ ...cacheCotacao, cache: true, stale: true });
@@ -56,7 +60,6 @@ app.get('/api/cotacao', async (req, res) => {
     }
 
     if (!response.ok) {
-      // Se a API externa falhar mas tivermos cache antigo, devolve ele
       if (cacheCotacao) {
         return res.json({ ...cacheCotacao, cache: true, stale: true });
       }
@@ -88,10 +91,22 @@ app.get('/api/cotacao', async (req, res) => {
 
     res.json(cotacao);
   } catch (err) {
-    // Em caso de erro de rede, devolve cache antigo se houver
     if (cacheCotacao) {
       return res.json({ ...cacheCotacao, cache: true, stale: true });
     }
     res.status(500).json({ erro: 'Erro interno ao buscar cotação', detalhe: err.message });
   }
 });
+
+// Expõe função de reset para uso em testes
+app.resetarCacheCotacao = resetarCacheCotacao;
+
+// Expõe a função de reset do cache (usada em testes)
+app.resetarCacheCotacao = resetarCacheCotacao;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+}
+
+module.exports = app;
