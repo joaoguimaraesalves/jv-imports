@@ -165,30 +165,58 @@ async function carregarProximasContas() {
 }
 
 async function carregarCotacao() {
+  const elUsd = document.getElementById('cotacao-usd');
+  const elEur = document.getElementById('cotacao-eur');
+  const elVarUsd = document.getElementById('variacao-usd');
+  const elVarEur = document.getElementById('variacao-eur');
+  const cardUsd = elUsd.closest('.cotacao-card');
+  const cardEur = elEur.closest('.cotacao-card');
+
+  // Estado de carregamento
+  elUsd.textContent = '...';
+  elEur.textContent = '...';
+  elVarUsd.textContent = '';
+  elVarEur.textContent = '';
+  cardUsd.classList.remove('erro');
+  cardEur.classList.remove('erro');
+
   try {
+    console.log('[Cotação] Buscando /api/cotacao...');
     const res = await fetch('/api/cotacao');
-    if (!res.ok) throw new Error('Falha ao buscar cotação');
+    console.log('[Cotação] Status:', res.status);
+
+    if (!res.ok) {
+      throw new Error('HTTP ' + res.status);
+    }
+
     const data = await res.json();
+    console.log('[Cotação] Dados recebidos:', data);
 
-    document.getElementById('cotacao-usd').textContent =
-      'R$ ' + data.usd.valor.toFixed(2);
-    document.getElementById('cotacao-eur').textContent =
-      'R$ ' + data.eur.valor.toFixed(2);
+    // USD
+    elUsd.textContent = 'R$ ' + data.usd.valor.toFixed(2);
+    const sinalUsd = data.usd.variacao >= 0 ? '▲' : '▼';
+    elVarUsd.textContent = sinalUsd + ' ' + Math.abs(data.usd.variacao).toFixed(2) + '%';
 
-    const variacaoUsd = document.getElementById('variacao-usd');
-    variacaoUsd.textContent = data.usd.variacao.toFixed(2) + '%';
-    variacaoUsd.style.color = data.usd.variacao >= 0 ? 'green' : 'red';
+    // EUR
+    elEur.textContent = 'R$ ' + data.eur.valor.toFixed(2);
+    const sinalEur = data.eur.variacao >= 0 ? '▲' : '▼';
+    elVarEur.textContent = sinalEur + ' ' + Math.abs(data.eur.variacao).toFixed(2) + '%';
 
-    const variacaoEur = document.getElementById('variacao-eur');
-    variacaoEur.textContent = data.eur.variacao.toFixed(2) + '%';
-    variacaoEur.style.color = data.eur.variacao >= 0 ? 'green' : 'red';
   } catch (err) {
-    console.error('Erro ao carregar cotação:', err);
-    document.getElementById('cotacao-usd').textContent = 'indisponível';
-    document.getElementById('cotacao-eur').textContent = 'indisponível';
+    console.error('[Cotação] Erro:', err);
+    elUsd.textContent = 'indisponível';
+    elEur.textContent = 'indisponível';
+    elVarUsd.textContent = '';
+    elVarEur.textContent = '';
+    cardUsd.classList.add('erro');
+    cardEur.classList.add('erro');
   }
 }
 
-// Carrega ao abrir a página e a cada 5 minutos
+// Carrega ao abrir + a cada 5 min
 carregarCotacao();
 setInterval(carregarCotacao, 5 * 60 * 1000);
+
+// Botão de recarregar manual
+document.getElementById('btn-recarregar-cotacao')
+  ?.addEventListener('click', carregarCotacao);

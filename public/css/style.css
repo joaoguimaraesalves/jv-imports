@@ -264,14 +264,86 @@ select {
 }
 
 .widget-cotacao {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  margin-bottom: 16px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 18px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #475569;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
-.cotacao-grid { display: flex; gap: 16px; margin-top: 8px; }
-.cotacao-card { display: flex; flex-direction: column; padding: 8px 12px; background: #f7f9fc; border-radius: 6px; }
-.cotacao-card .moeda { font-size: 12px; color: #666; }
-.cotacao-card .valor { font-size: 20px; font-weight: bold; }
-.cotacao-card .variacao { font-size: 12px; font-weight: 600; }
+.widget-cotacao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.widget-cotacao h3 {
+  color: #f1f5f9;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+#btn-recarregar-cotacao {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #f1f5f9;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.4s, background 0.2s;
+}
+#btn-recarregar-cotacao:hover {
+  background: rgba(255,255,255,0.2);
+  transform: rotate(180deg);
+}
+.cotacao-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cotacao-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border-radius: 10px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.cotacao-card.cotacao-usd {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+}
+.cotacao-card.cotacao-eur {
+  background: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+}
+.cotacao-card .moeda {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.95;
+  margin-bottom: 4px;
+}
+.cotacao-card .valor {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.cotacao-card .variacao {
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+.cotacao-card.erro {
+  background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+}
+#cotacao-fonte {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+  margin-top: 10px;
+  text-align: right;
+}

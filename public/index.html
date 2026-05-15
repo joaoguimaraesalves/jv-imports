@@ -41,15 +41,18 @@
     </div>
 
     <div class="widget-cotacao" id="widget-cotacao">
-        <h3>💱 Cotação do Dia</h3>
+        <div class="widget-cotacao-header">
+            <h3>💱 Cotação do Dia</h3>
+            <button id="btn-recarregar-cotacao" title="Recarregar cotação">⟳</button>
+        </div>
         <div class="cotacao-grid">
-            <div class="cotacao-card">
-            <span class="moeda">USD → BRL</span>
+            <div class="cotacao-card cotacao-usd">
+            <span class="moeda">🇺🇸 USD → BRL</span>
             <span class="valor" id="cotacao-usd">--</span>
             <span class="variacao" id="variacao-usd">--</span>
             </div>
-            <div class="cotacao-card">
-            <span class="moeda">EUR → BRL</span>
+            <div class="cotacao-card cotacao-eur">
+            <span class="moeda">🇪🇺 EUR → BRL</span>
             <span class="valor" id="cotacao-eur">--</span>
             <span class="variacao" id="variacao-eur">--</span>
             </div>
