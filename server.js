@@ -1,30 +1,28 @@
 // server.js
 const express = require('express');
 const path = require('path');
+const pool = require('./db/pool');
 const { initDb } = require('./db/schema');
 
 const app = express();
-const port = 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const db = initDb();
-
-app.use('/api/dashboard',    require('./routes/dashboard')(db));
-app.use('/api/produtos',     require('./routes/produtos')(db));
-app.use('/api/vendas',       require('./routes/vendas')(db));
-app.use('/api/saidas',       require('./routes/saidas')(db));
-app.use('/api/compras',      require('./routes/compras')(db));
-app.use('/api/contas-pagar', require('./routes/contas-pagar')(db));
-app.use('/api/estoque',      require('./routes/estoque')(db));
+app.use('/api/dashboard',    require('./routes/dashboard')(pool));
+app.use('/api/produtos',     require('./routes/produtos')(pool));
+app.use('/api/vendas',       require('./routes/vendas')(pool));
+app.use('/api/saidas',       require('./routes/saidas')(pool));
+app.use('/api/compras',      require('./routes/compras')(pool));
+app.use('/api/contas-pagar', require('./routes/contas-pagar')(pool));
+app.use('/api/estoque',      require('./routes/estoque')(pool));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
 
 // =============================================
 // Integração com API pública - AwesomeAPI
 // Issue #1 - Cotação de moedas USD/EUR → BRL
+// (inalterado da Etapa 2)
 // =============================================
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 let cacheCotacao = null;
@@ -38,7 +36,6 @@ function resetarCacheCotacao() {
 app.get('/api/cotacao', async (req, res) => {
   const agora = Date.now();
 
-  // Devolve do cache se ainda estiver válido
   if (cacheCotacao && (agora - cacheTimestamp) < CACHE_TTL_MS) {
     return res.json({ ...cacheCotacao, cache: true });
   }
@@ -48,7 +45,6 @@ app.get('/api/cotacao', async (req, res) => {
       'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL'
     );
 
-    // Rate limit da AwesomeAPI
     if (response.status === 429) {
       if (cacheCotacao) {
         return res.json({ ...cacheCotacao, cache: true, stale: true });
@@ -85,7 +81,6 @@ app.get('/api/cotacao', async (req, res) => {
       fonte: 'AwesomeAPI',
     };
 
-    // Atualiza o cache
     cacheCotacao = cotacao;
     cacheTimestamp = agora;
 
@@ -98,15 +93,17 @@ app.get('/api/cotacao', async (req, res) => {
   }
 });
 
-// Expõe função de reset para uso em testes
-app.resetarCacheCotacao = resetarCacheCotacao;
-
-// Expõe a função de reset do cache (usada em testes)
+// Expõe a função de reset do cache (usada nos testes)
 app.resetarCacheCotacao = resetarCacheCotacao;
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+  initDb(pool)
+    .then(() => app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`)))
+    .catch((err) => {
+      console.error('Falha ao iniciar o banco de dados:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

@@ -1,68 +1,65 @@
 // routes/contas-pagar.js
 const express = require('express');
 
-module.exports = (db) => {
-    const router = express.Router();
+module.exports = (pool) => {
+  const router = express.Router();
 
-    const listarTodas     = db.prepare(`SELECT * FROM contas_pagar ORDER BY vencimento ASC`);
-    const listarPendentes = db.prepare(`SELECT * FROM contas_pagar WHERE status = 'pendente' ORDER BY vencimento ASC`);
-    const listarPagas     = db.prepare(`SELECT * FROM contas_pagar WHERE status = 'paga' ORDER BY data_pagamento DESC`);
+  router.get('/', async (req, res) => {
+    const { status } = req.query;
+    let sql;
+    if (status === 'pendente') {
+      sql = `SELECT * FROM contas_pagar WHERE status = 'pendente' ORDER BY vencimento ASC`;
+    } else if (status === 'paga') {
+      sql = `SELECT * FROM contas_pagar WHERE status = 'paga' ORDER BY data_pagamento DESC`;
+    } else {
+      sql = `SELECT * FROM contas_pagar ORDER BY vencimento ASC`;
+    }
+    const { rows } = await pool.query(sql);
+    res.json(rows);
+  });
 
-    const buscar = db.prepare(`SELECT * FROM contas_pagar WHERE id = ?`);
-
-    const inserir = db.prepare(
-        `INSERT INTO contas_pagar (descricao, valor, vencimento, status)
-         VALUES (?, ?, ?, 'pendente')`
+  // Lançamento manual (fora de uma compra). Útil pra aluguel ou algo avulso.
+  router.post('/', async (req, res) => {
+    const { descricao, valor, vencimento } = req.body;
+    if (!descricao || !valor || !vencimento) {
+      return res.status(400).json({ error: 'descricao, valor e vencimento são obrigatórios' });
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO contas_pagar (descricao, valor, vencimento, status)
+       VALUES ($1, $2, $3, 'pendente') RETURNING id`,
+      [descricao, parseFloat(valor), vencimento]
     );
-    const marcarPaga = db.prepare(
-        `UPDATE contas_pagar SET status = 'paga', data_pagamento = ? WHERE id = ?`
+    res.json({ ok: true, id: rows[0].id });
+  });
+
+  router.patch('/:id/pagar', async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM contas_pagar WHERE id = $1', [req.params.id]);
+    const conta = rows[0];
+    if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (conta.status === 'paga') return res.status(400).json({ error: 'Conta já está paga' });
+    await pool.query(
+      `UPDATE contas_pagar SET status = 'paga', data_pagamento = $1 WHERE id = $2`,
+      [new Date().toISOString(), req.params.id]
     );
-    const desmarcarPaga = db.prepare(
-        `UPDATE contas_pagar SET status = 'pendente', data_pagamento = NULL WHERE id = ?`
+    res.json({ ok: true });
+  });
+
+  // Útil se a pessoa marcar por engano
+  router.patch('/:id/desfazer-pagamento', async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM contas_pagar WHERE id = $1', [req.params.id]);
+    const conta = rows[0];
+    if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+    await pool.query(
+      `UPDATE contas_pagar SET status = 'pendente', data_pagamento = NULL WHERE id = $1`,
+      [req.params.id]
     );
-    const excluir = db.prepare(`DELETE FROM contas_pagar WHERE id = ?`);
+    res.json({ ok: true });
+  });
 
-    router.get('/', (req, res) => {
-        const { status } = req.query;
-        let stmt;
-        if      (status === 'pendente') stmt = listarPendentes;
-        else if (status === 'paga')     stmt = listarPagas;
-        else                            stmt = listarTodas;
-        res.json(stmt.all());
-    });
+  router.delete('/:id', async (req, res) => {
+    await pool.query('DELETE FROM contas_pagar WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  });
 
-    // Lançamento manual (fora de uma compra). Útil pra aluguel ou algo avulso.
-    router.post('/', (req, res) => {
-        const { descricao, valor, vencimento } = req.body;
-        if (!descricao || !valor || !vencimento) {
-            return res.status(400).json({ error: 'descricao, valor e vencimento são obrigatórios' });
-        }
-        const info = inserir.run(descricao, parseFloat(valor), vencimento);
-        res.json({ ok: true, id: info.lastInsertRowid });
-    });
-
-    router.patch('/:id/pagar', (req, res) => {
-        const conta = buscar.get(req.params.id);
-        if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
-        if (conta.status === 'paga') {
-            return res.status(400).json({ error: 'Conta já está paga' });
-        }
-        marcarPaga.run(new Date().toISOString(), req.params.id);
-        res.json({ ok: true });
-    });
-
-    // Útil se a pessoa marcar por engano
-    router.patch('/:id/desfazer-pagamento', (req, res) => {
-        const conta = buscar.get(req.params.id);
-        if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
-        desmarcarPaga.run(req.params.id);
-        res.json({ ok: true });
-    });
-
-    router.delete('/:id', (req, res) => {
-        excluir.run(req.params.id);
-        res.json({ ok: true });
-    });
-
-    return router;
+  return router;
 };
