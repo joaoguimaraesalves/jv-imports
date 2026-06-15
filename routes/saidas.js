@@ -1,27 +1,27 @@
 // routes/saidas.js
 const express = require('express');
 
-module.exports = (db) => {
-    const router = express.Router();
+module.exports = (pool) => {
+  const router = express.Router();
 
-    const listar  = db.prepare(`SELECT * FROM saidas ORDER BY id DESC`);
-    const inserir = db.prepare(`INSERT INTO saidas (descricao, valor, data) VALUES (?, ?, ?)`);
-    const excluir = db.prepare(`DELETE FROM saidas WHERE id = ?`);
+  router.get('/', async (req, res) => {
+    const { rows } = await pool.query('SELECT * FROM saidas ORDER BY id DESC');
+    res.json(rows);
+  });
 
-    router.get('/', (req, res) => {
-        res.json(listar.all());
-    });
+  router.post('/', async (req, res) => {
+    const { descricao, valor } = req.body;
+    const { rows } = await pool.query(
+      'INSERT INTO saidas (descricao, valor, data) VALUES ($1, $2, $3) RETURNING id',
+      [descricao, valor, new Date().toISOString()]
+    );
+    res.json({ ok: true, id: rows[0].id });
+  });
 
-    router.post('/', (req, res) => {
-        const { descricao, valor } = req.body;
-        const info = inserir.run(descricao, valor, new Date().toISOString());
-        res.json({ ok: true, id: info.lastInsertRowid });
-    });
+  router.delete('/:id', async (req, res) => {
+    await pool.query('DELETE FROM saidas WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  });
 
-    router.delete('/:id', (req, res) => {
-        excluir.run(req.params.id);
-        res.json({ ok: true });
-    });
-
-    return router;
+  return router;
 };

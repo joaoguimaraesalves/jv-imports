@@ -1,89 +1,78 @@
 // db/schema.js
-const Database = require('better-sqlite3');
-const path = require('path');
+// Cria as tabelas no Postgres (Neon) caso ainda não existam.
+// É chamado uma vez no boot do servidor.
+async function initDb(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS produtos (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      custo NUMERIC NOT NULL DEFAULT 0,
+      preco NUMERIC NOT NULL DEFAULT 0,
+      quantidade INTEGER NOT NULL DEFAULT 0
+    );
 
-function initDb() {
-    const dbPath = path.join(__dirname, '..', 'sistema.sqlite');
-    const db = new Database(dbPath);
-    db.pragma('journal_mode = WAL'); // melhora performance e concorrência em leitura/escrita
+    CREATE TABLE IF NOT EXISTS vendas (
+      id SERIAL PRIMARY KEY,
+      produto_id INTEGER,
+      produto_nome TEXT,
+      quantidade INTEGER,
+      valor NUMERIC,
+      custo NUMERIC,
+      forma_pagamento TEXT,
+      data TEXT
+    );
 
-    // db.exec aceita múltiplos statements de uma vez, separados por ';'
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            custo REAL NOT NULL DEFAULT 0,
-            preco REAL NOT NULL DEFAULT 0,
-            quantidade INTEGER NOT NULL DEFAULT 0
-        );
+    CREATE TABLE IF NOT EXISTS saidas (
+      id SERIAL PRIMARY KEY,
+      descricao TEXT,
+      valor NUMERIC,
+      data TEXT
+    );
 
-        CREATE TABLE IF NOT EXISTS vendas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER,
-            produto_nome TEXT,
-            quantidade INTEGER,
-            valor REAL,
-            custo REAL,
-            forma_pagamento TEXT,
-            data TEXT
-        );
+    CREATE TABLE IF NOT EXISTS compras (
+      id SERIAL PRIMARY KEY,
+      descricao TEXT,
+      valor_total NUMERIC,
+      forma_pagamento TEXT,
+      parcelas INTEGER DEFAULT 1,
+      data TEXT
+    );
 
-        CREATE TABLE IF NOT EXISTS saidas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            descricao TEXT,
-            valor REAL,
-            data TEXT
-        );
+    CREATE TABLE IF NOT EXISTS compra_itens (
+      id SERIAL PRIMARY KEY,
+      compra_id INTEGER REFERENCES compras(id),
+      produto_id INTEGER REFERENCES produtos(id),
+      produto_nome TEXT,
+      quantidade INTEGER,
+      custo_unitario NUMERIC
+    );
 
-        CREATE TABLE IF NOT EXISTS compras (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            descricao TEXT,
-            valor_total REAL,
-            forma_pagamento TEXT,
-            parcelas INTEGER DEFAULT 1,
-            data TEXT
-        );
+    CREATE TABLE IF NOT EXISTS contas_pagar (
+      id SERIAL PRIMARY KEY,
+      descricao TEXT,
+      valor NUMERIC,
+      vencimento TEXT,
+      status TEXT DEFAULT 'pendente',
+      data_pagamento TEXT,
+      compra_id INTEGER REFERENCES compras(id),
+      parcela_num INTEGER,
+      parcela_total INTEGER
+    );
 
-        CREATE TABLE IF NOT EXISTS compra_itens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            compra_id INTEGER,
-            produto_id INTEGER,
-            produto_nome TEXT,
-            quantidade INTEGER,
-            custo_unitario REAL,
-            FOREIGN KEY (compra_id) REFERENCES compras(id),
-            FOREIGN KEY (produto_id) REFERENCES produtos(id)
-        );
+    CREATE TABLE IF NOT EXISTS estoque_movimentos (
+      id SERIAL PRIMARY KEY,
+      produto_id INTEGER REFERENCES produtos(id),
+      tipo TEXT,
+      quantidade INTEGER,
+      custo_unitario NUMERIC,
+      origem_tipo TEXT,
+      origem_id INTEGER,
+      observacao TEXT,
+      data TEXT
+    );
+  `);
 
-        CREATE TABLE IF NOT EXISTS contas_pagar (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            descricao TEXT,
-            valor REAL,
-            vencimento TEXT,
-            status TEXT DEFAULT 'pendente',
-            data_pagamento TEXT,
-            compra_id INTEGER,
-            parcela_num INTEGER,
-            parcela_total INTEGER,
-            FOREIGN KEY (compra_id) REFERENCES compras(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS estoque_movimentos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER,
-            tipo TEXT,
-            quantidade INTEGER,
-            custo_unitario REAL,
-            origem_tipo TEXT,
-            origem_id INTEGER,
-            observacao TEXT,
-            data TEXT,
-            FOREIGN KEY (produto_id) REFERENCES produtos(id)
-        );
-    `);
-
-    console.log('Banco de dados da JV Imports conectado!');
-    return db;
+  console.log('Banco de dados da JV Imports (Postgres/Neon) conectado!');
 }
 
 module.exports = { initDb };
