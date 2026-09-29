@@ -72,6 +72,7 @@ automaticamente no primeiro acesso.
 npm test
 ```
 
+- Testes do cálculo da Meta de Caixa (`planejamento.test.js`).
 - Teste de integração com o banco real (`produtos.db.test.js`), que roda quando
   `DATABASE_URL` está definida (no CI vem de um *secret*).
 
@@ -86,6 +87,7 @@ npm test
 | GET/POST/DELETE | `/api/saidas` | Despesas avulsas |
 | GET | `/api/estoque/movimentos` | Histórico de movimentação |
 | GET | `/api/dashboard` | Indicadores e gráficos |
+| GET / PUT | `/api/caixa`, `/api/caixa/saldo` | Saldo da conta e Meta de Caixa (quanto falta para pagar as contas) |
 
 ---
 

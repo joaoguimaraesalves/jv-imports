@@ -63,6 +63,32 @@
         <div class="card bg-green"><div class="card-header"><span>Margem</span></div><div class="card-value" id="val-margem">0.0%</div></div>
     </div>
 
+    <!-- Meta de Caixa: saldo da conta x contas a pagar -->
+    <div class="chart-container meta-caixa">
+        <div class="chart-header">
+            <h3>💰 Meta de Caixa</h3>
+            <form class="saldo-form" onsubmit="salvarSaldo(event)">
+                <label for="caixa-saldo-input">Saldo atual da conta</label>
+                <input type="number" id="caixa-saldo-input" step="0.01" placeholder="Ex.: 400,00" required>
+                <button type="submit" class="btn-green">Salvar</button>
+            </form>
+        </div>
+        <div id="caixa-saldo-info" class="caixa-saldo-info"></div>
+        <div class="caixa-resumo">
+            <div><span>Saldo estimado</span><strong id="caixa-saldo">--</strong></div>
+            <div><span>Contas pendentes</span><strong id="caixa-pendente">--</strong></div>
+            <div><span>Falta arrecadar</span><strong id="caixa-falta">--</strong></div>
+            <div><span>Média de vendas/dia (30d)</span><strong id="caixa-media">--</strong></div>
+        </div>
+        <div id="caixa-destaque" class="caixa-destaque"></div>
+        <table class="caixa-tabela">
+            <thead>
+                <tr><th>Conta</th><th>Vencimento</th><th>Valor</th><th>Falta</th><th>Vender por dia</th><th>Situação</th></tr>
+            </thead>
+            <tbody id="caixa-lista"></tbody>
+        </table>
+    </div>
+
     <div class="dashboard-row">
         <div class="chart-container" style="flex: 2;">
             <div class="chart-header">
@@ -312,6 +338,7 @@
 
     <!-- Ordem importa: utils → módulos → app -->
     <script src="/js/utils.js"></script>
+    <script src="/js/planejamento.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/produtos.js"></script>
     <script src="/js/vendas.js"></script>

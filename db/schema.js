@@ -70,6 +70,13 @@ async function initDb(pool) {
       observacao TEXT,
       data TEXT
     );
+
+    -- Configurações simples chave/valor (ex.: saldo informado da conta)
+    CREATE TABLE IF NOT EXISTS configuracoes (
+      chave TEXT PRIMARY KEY,
+      valor TEXT,
+      atualizado_em TEXT
+    );
   `);
 
   console.log('Banco de dados da JV Imports (Postgres/Neon) conectado!');
