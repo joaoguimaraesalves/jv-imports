@@ -7,6 +7,14 @@
     <title>JV Imports - Gestão</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Aplica o tema salvo antes de renderizar (evita "flash" de tema)
+        (function () {
+            var tema = 'dark';
+            try { tema = localStorage.getItem('jv-tema') || 'dark'; } catch (e) {}
+            document.documentElement.setAttribute('data-theme', tema);
+        })();
+    </script>
 </head>
 <body>
     <aside class="sidebar">
@@ -20,6 +28,11 @@
             <li id="menu-movimentos"   onclick="mudarTela('movimentos')">🔄 Movimentos</li>
             <li id="menu-saidas"       onclick="mudarTela('saidas')">📤 Gastos e Despesas</li>
         </ul>
+        <div class="sidebar-footer">
+            <button id="btn-tema" class="btn-tema" onclick="alternarTema()">
+                <span id="tema-icone">🌙</span><span id="tema-texto">Modo Escuro</span>
+            </button>
+        </div>
     </aside>
 
     <main class="main-content">
@@ -38,26 +51,6 @@
             </select>
             <button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda Rápida</button>
         </div>
-    </div>
-
-    <div class="widget-cotacao" id="widget-cotacao">
-        <div class="widget-cotacao-header">
-            <h3>💱 Cotação do Dia</h3>
-            <button id="btn-recarregar-cotacao" title="Recarregar cotação">⟳</button>
-        </div>
-        <div class="cotacao-grid">
-            <div class="cotacao-card cotacao-usd">
-            <span class="moeda">🇺🇸 USD → BRL</span>
-            <span class="valor" id="cotacao-usd">--</span>
-            <span class="variacao" id="variacao-usd">--</span>
-            </div>
-            <div class="cotacao-card cotacao-eur">
-            <span class="moeda">🇪🇺 EUR → BRL</span>
-            <span class="valor" id="cotacao-eur">--</span>
-            <span class="variacao" id="variacao-eur">--</span>
-            </div>
-        </div>
-        <small id="cotacao-fonte">Fonte: AwesomeAPI</small>
     </div>
 
     <div class="cards-grid">
@@ -327,5 +320,6 @@
     <script src="/js/contas-pagar.js"></script>
     <script src="/js/movimentos.js"></script>
     <script src="/js/app.js"></script>
+    <script src="/js/tema.js"></script>
 </body>
 </html>
