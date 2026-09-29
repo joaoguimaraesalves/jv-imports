@@ -13,7 +13,6 @@ function mudarTela(nomeTela) {
     if (nomeTela === 'compras')      carregarCompras();
     if (nomeTela === 'contas-pagar') carregarContasPagar();
     if (nomeTela === 'movimentos')   carregarMovimentos();
-    if (nomeTela === 'saidas')       carregarSaidas();
 }
 
 // Menu lateral no celular (gaveta)

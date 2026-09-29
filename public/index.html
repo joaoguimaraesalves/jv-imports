@@ -26,7 +26,6 @@
             <li id="menu-compras"      onclick="mudarTela('compras')">📥 Compras / Entradas</li>
             <li id="menu-contas-pagar" onclick="mudarTela('contas-pagar')">💳 Contas a Pagar</li>
             <li id="menu-movimentos"   onclick="mudarTela('movimentos')">🔄 Movimentos</li>
-            <li id="menu-saidas"       onclick="mudarTela('saidas')">📤 Gastos e Despesas</li>
         </ul>
         <div class="sidebar-footer">
             <button id="btn-tema" class="btn-tema" onclick="alternarTema()">
@@ -65,7 +64,7 @@
     <div class="cards-grid">
         <div class="card bg-green"><div class="card-header"><span>Lucro Líquido</span></div><div class="card-value" id="val-lucro">R$ 0,00</div></div>
         <div class="card bg-blue"><div class="card-header"><span>Total em Vendas</span></div><div class="card-value" id="val-vendas">R$ 0,00</div></div>
-        <div class="card bg-red"><div class="card-header"><span>Despesas Totais</span></div><div class="card-value" id="val-despesas">R$ 0,00</div></div>
+        <div class="card bg-red"><div class="card-header"><span>Contas Pagas</span></div><div class="card-value" id="val-despesas">R$ 0,00</div></div>
         <div class="card bg-purple"><div class="card-header"><span>Qtd. Vendida</span></div><div class="card-value" id="val-qtd">0</div></div>
         <div class="card bg-orange"><div class="card-header"><span>Ticket Médio</span></div><div class="card-value" id="val-ticket">R$ 0,00</div></div>
         <div class="card bg-red"><div class="card-header"><span>Custos de Produto</span></div><div class="card-value" id="val-custos">R$ 0,00</div></div>
@@ -205,17 +204,6 @@
             </table>
         </div>
 
-        <!-- Saídas -->
-        <div id="tela-saidas" class="tela">
-            <div class="header">
-                <h2>Controle de Gastos</h2>
-                <button class="btn-red" onclick="abrirModal('modal-gasto')">+ Registrar Gasto</button>
-            </div>
-            <table>
-                <thead><tr><th>Data</th><th>Descrição da Despesa</th><th>Valor Pago</th><th>Ações</th></tr></thead>
-                <tbody id="lista-saidas"></tbody>
-            </table>
-        </div>
     </main>
 
     <!-- Modal: Venda -->
@@ -266,21 +254,6 @@
                 <div class="modal-actions">
                     <button type="button" class="btn-gray" onclick="fecharModal('modal-produto')">Cancelar</button>
                     <button type="submit" class="btn-blue">Salvar Produto</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Gasto -->
-    <div id="modal-gasto" class="modal-overlay">
-        <div class="modal-content">
-            <form onsubmit="salvarGasto(event)">
-                <h3>Registrar Gasto</h3>
-                <div class="form-group"><label>Descrição</label><input type="text" id="gasto-desc" required></div>
-                <div class="form-group"><label>Valor (R$)</label><input type="number" id="gasto-valor" step="0.01" required></div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-gray" onclick="fecharModal('modal-gasto')">Cancelar</button>
-                    <button type="submit" class="btn-red">Salvar Gasto</button>
                 </div>
             </form>
         </div>
@@ -351,7 +324,6 @@
     <script src="/js/dashboard.js"></script>
     <script src="/js/produtos.js"></script>
     <script src="/js/vendas.js"></script>
-    <script src="/js/saidas.js"></script>
     <script src="/js/compras.js"></script>
     <script src="/js/contas-pagar.js"></script>
     <script src="/js/movimentos.js"></script>

@@ -32,7 +32,7 @@ function mudarOrdemTop(por) {
 async function carregarDashboard() {
     const d = await fetchJSON(`/api/dashboard?periodo=${estadoDashboard.periodo}`);
     document.getElementById('val-lucro').innerText    = formatarMoeda(d.lucro_liquido);
-    document.getElementById('val-despesas').innerText = formatarMoeda(d.despesas_totais);
+    document.getElementById('val-despesas').innerText = formatarMoeda(d.contas_pagas);
     document.getElementById('val-vendas').innerText   = formatarMoeda(d.total_vendas);
     document.getElementById('val-qtd').innerText      = d.qtd_vendida;
     document.getElementById('val-ticket').innerText   = formatarMoeda(d.ticket_medio);
@@ -52,7 +52,7 @@ function coresTema() {
 }
 
 async function desenharGrafico() {
-    const { vendas, saidas, contas } = await fetchJSON(
+    const { vendas, contas } = await fetchJSON(
         `/api/dashboard/grafico?periodo=${estadoDashboard.periodo}&agrupar=${estadoDashboard.agrupar}`
     );
 
@@ -61,7 +61,6 @@ async function desenharGrafico() {
     const garantir = (p) => { if (!porPeriodo[p]) porPeriodo[p] = { faturamento: 0, custo: 0, gastos: 0 }; };
 
     vendas.forEach(v => { garantir(v.periodo); porPeriodo[v.periodo].faturamento += v.faturamento; porPeriodo[v.periodo].custo += v.custo; });
-    saidas.forEach(s => { garantir(s.periodo); porPeriodo[s.periodo].gastos += s.gastos; });
     contas.forEach(c => { garantir(c.periodo); porPeriodo[c.periodo].gastos += c.pagas; });
 
     const periodos     = Object.keys(porPeriodo).sort();
@@ -91,7 +90,7 @@ async function desenharGrafico() {
             datasets: [
                 { label: 'Faturamento',   data: faturamentos, backgroundColor: '#3B82F6', borderRadius: 4 },
                 { label: 'Lucro Líquido', data: lucros,       backgroundColor: '#10B981', borderRadius: 4 },
-                { label: 'Despesas',      data: gastos,       backgroundColor: '#EF4444', borderRadius: 4 }
+                { label: 'Contas pagas',  data: gastos,       backgroundColor: '#EF4444', borderRadius: 4 }
             ]
         },
         options: {
@@ -222,7 +221,6 @@ async function carregarMetaCaixa() {
     const quando = new Date(d.saldo_atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     const ajustes = [];
     if (d.vendas_desde)       ajustes.push(`+ ${formatarMoeda(d.vendas_desde)} em vendas`);
-    if (d.saidas_desde)       ajustes.push(`− ${formatarMoeda(d.saidas_desde)} em despesas`);
     if (d.contas_pagas_desde) ajustes.push(`− ${formatarMoeda(d.contas_pagas_desde)} em contas pagas`);
     info.innerHTML = `Saldo informado: ${formatarMoeda(d.saldo_informado)} em ${quando}`
         + (ajustes.length ? ` · desde então: ${ajustes.join(', ')}` : '');

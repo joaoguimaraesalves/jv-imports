@@ -12,7 +12,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/dashboard',    require('./routes/dashboard')(pool));
 app.use('/api/produtos',     require('./routes/produtos')(pool));
 app.use('/api/vendas',       require('./routes/vendas')(pool));
-app.use('/api/saidas',       require('./routes/saidas')(pool));
 app.use('/api/compras',      require('./routes/compras')(pool));
 app.use('/api/contas-pagar', require('./routes/contas-pagar')(pool));
 app.use('/api/estoque',      require('./routes/estoque')(pool));

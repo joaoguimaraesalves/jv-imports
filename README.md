@@ -4,7 +4,7 @@
 >
 > *Hospedado no plano gratuito do Render — o primeiro acesso após um período de inatividade pode levar ~50 segundos enquanto o servidor "acorda".*
 
-Sistema web de gestão de vendas, estoque, compras e despesas voltado para
+Sistema web de gestão de vendas, estoque, compras e contas a pagar voltado para
 microempreendedores e revendedores que trabalham com produtos importados.
 Permite cadastrar produtos, registrar vendas e compras (à vista ou parceladas),
 controlar contas a pagar, acompanhar a movimentação de estoque e visualizar
@@ -33,7 +33,7 @@ A conexão é feita por um pool (`db/pool.js`) lendo a variável de ambiente
 `DATABASE_URL`, e as tabelas são criadas automaticamente no primeiro boot
 (`db/schema.js`).
 
-Tabelas: `produtos`, `vendas`, `saidas`, `compras`, `compra_itens`,
+Tabelas: `produtos`, `vendas`, `compras`, `compra_itens`,
 `contas_pagar`, `estoque_movimentos`.
 
 Operações de venda e compra rodam dentro de transações
@@ -84,7 +84,6 @@ npm test
 | GET/POST/DELETE | `/api/vendas` | Vendas (baixa estoque em transação) |
 | GET/POST/DELETE | `/api/compras` | Compras com itens e parcelamento |
 | GET/POST/PATCH/DELETE | `/api/contas-pagar` | Contas a pagar |
-| GET/POST/DELETE | `/api/saidas` | Despesas avulsas |
 | GET | `/api/estoque/movimentos` | Histórico de movimentação |
 | GET | `/api/dashboard` | Indicadores e gráficos |
 | GET / PUT | `/api/caixa`, `/api/caixa/saldo` | Saldo da conta e Meta de Caixa (quanto falta para pagar as contas) |

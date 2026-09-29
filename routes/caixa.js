@@ -1,7 +1,7 @@
 // routes/caixa.js
 // Saldo da conta de vendas + dados para o planejamento de caixa (Meta de Caixa).
 // O saldo é informado manualmente; a partir daí o sistema estima o saldo atual
-// somando as vendas e descontando despesas e contas pagas registradas depois.
+// somando as vendas e descontando as contas pagas registradas depois.
 const express = require('express');
 
 module.exports = (pool) => {
@@ -15,13 +15,10 @@ module.exports = (pool) => {
     const saldoInformado = cfg ? parseFloat(cfg.valor) : null;
     const desde = cfg ? cfg.atualizado_em : null;
 
-    let vendasDesde = 0, saidasDesde = 0, contasPagasDesde = 0;
+    let vendasDesde = 0, contasPagasDesde = 0;
     if (desde) {
       vendasDesde = (await pool.query(
         'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data > $1', [desde]
-      )).rows[0].total;
-      saidasDesde = (await pool.query(
-        'SELECT COALESCE(SUM(valor),0) as total FROM saidas WHERE data > $1', [desde]
       )).rows[0].total;
       contasPagasDesde = (await pool.query(
         `SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar
@@ -45,11 +42,10 @@ module.exports = (pool) => {
       saldo_informado: saldoInformado,
       saldo_atualizado_em: desde,
       vendas_desde: vendasDesde,
-      saidas_desde: saidasDesde,
       contas_pagas_desde: contasPagasDesde,
       saldo_estimado: saldoInformado === null
         ? null
-        : saldoInformado + vendasDesde - saidasDesde - contasPagasDesde,
+        : saldoInformado + vendasDesde - contasPagasDesde,
       faturamento_30d: faturamento30d,
       media_diaria_vendas: faturamento30d / 30,
       contas_pendentes: contasPendentes,
