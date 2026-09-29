@@ -75,9 +75,9 @@ table { width: 100%; border-collapse: collapse; margin-top: 20px; background-col
 th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
 th { background-color: var(--bg-th, #0B1120); color: var(--text-muted); }
 
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 12px; }
 .modal-overlay.active { display: flex; }
-.modal-content { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; width: 400px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+.modal-content { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; width: 400px; max-width: 100%; max-height: 100%; overflow-y: auto; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
 .modal-content h3 { margin-bottom: 20px; color: var(--text-main); font-size: 1.2rem; }
 
 .form-group { margin-bottom: 15px; }
@@ -350,3 +350,87 @@ select {
 :root[data-theme="light"] .modal-overlay { background-color: rgba(0, 0, 0, 0.4); }
 :root[data-theme="light"] .menu-list li.active { background-color: #ECFDF5; }
 :root[data-theme="light"] .card { box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); }
+
+/* ===== Responsivo: celular ===== */
+.topbar-mobile, .sidebar-backdrop { display: none; }
+
+@media (max-width: 768px) {
+    body { height: 100dvh; }
+
+    /* Menu lateral vira gaveta, aberta pelo botão ☰ */
+    .sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 260px;
+        z-index: 900;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+    body.menu-aberto .sidebar { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.3); }
+    body.menu-aberto .sidebar-backdrop {
+        display: block;
+        position: fixed; inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 800;
+    }
+
+    .topbar-mobile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        top: -16px;
+        z-index: 700;
+        margin: -16px -16px 16px;
+        padding: 10px 16px;
+        background-color: var(--bg-sidebar);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .btn-menu {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 6px;
+        width: 40px; height: 40px;
+        font-size: 1.3rem;
+        cursor: pointer;
+    }
+    .topbar-logo { font-weight: 900; color: var(--color-green); text-transform: uppercase; letter-spacing: 1px; }
+
+    .main-content { padding: 16px; }
+
+    /* Cabeçalhos: título em cima, ações embaixo */
+    .header { flex-wrap: wrap; gap: 10px; }
+    .header h2 { font-size: 1.25rem; width: 100%; }
+    .header > div { flex-wrap: wrap; width: 100%; }
+    .header > div > *, .header > button, .header > select { flex: 1 1 auto; }
+
+    .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+    .card { min-height: 80px; padding: 12px; }
+    .card-value { font-size: 1.15rem; }
+
+    .chart-container { padding: 14px; margin-bottom: 20px; }
+    .chart-header { flex-wrap: wrap; gap: 10px; }
+    .toggle-group { flex-wrap: wrap; }
+    .grafico-wrapper { height: 240px; }
+    .dashboard-row { margin-bottom: 20px; }
+
+    /* Tabelas rolam na horizontal em vez de estourar a tela */
+    table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+    th, td { padding: 10px 12px; }
+
+    /* Meta de Caixa */
+    .saldo-form { width: 100%; }
+    .saldo-form label { width: 100%; }
+    .saldo-form input { flex: 1; width: auto; }
+    .caixa-resumo { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .caixa-resumo strong { font-size: 1rem; }
+
+    /* Formulários e modais */
+    .modal-content { padding: 18px; }
+    .form-row { flex-direction: column; gap: 0; }
+    .compra-item-row { grid-template-columns: 1fr 1fr 36px; }
+    .compra-item-row > div:first-child { grid-column: 1 / -1; }
+    /* 16px evita o zoom automático do iPhone ao tocar no campo */
+    input, select { font-size: 16px !important; }
+}
