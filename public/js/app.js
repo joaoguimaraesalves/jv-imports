@@ -5,6 +5,8 @@ function mudarTela(nomeTela) {
     document.getElementById(`tela-${nomeTela}`).classList.add('active');
     document.getElementById(`menu-${nomeTela}`).classList.add('active');
 
+    fecharMenu();
+
     if (nomeTela === 'dashboard')    atualizarDashboardCompleto();
     if (nomeTela === 'produtos')     carregarProdutos();
     if (nomeTela === 'vendas')       carregarVendas();
@@ -13,6 +15,10 @@ function mudarTela(nomeTela) {
     if (nomeTela === 'movimentos')   carregarMovimentos();
     if (nomeTela === 'saidas')       carregarSaidas();
 }
+
+// Menu lateral no celular (gaveta)
+function abrirMenu()  { document.body.classList.add('menu-aberto'); }
+function fecharMenu() { document.body.classList.remove('menu-aberto'); }
 
 // Inicialização
 atualizarDashboardCompleto();
