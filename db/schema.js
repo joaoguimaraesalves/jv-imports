@@ -22,13 +22,6 @@ async function initDb(pool) {
       data TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS saidas (
-      id SERIAL PRIMARY KEY,
-      descricao TEXT,
-      valor NUMERIC,
-      data TEXT
-    );
-
     CREATE TABLE IF NOT EXISTS compras (
       id SERIAL PRIMARY KEY,
       descricao TEXT,

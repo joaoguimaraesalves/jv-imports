@@ -28,7 +28,6 @@ module.exports = (pool) => {
   router.get('/', async (req, res) => {
     const periodo = req.query.periodo || 'total';
     const wVendas = whereData('data', periodo);
-    const wSaidas = whereData('data', periodo);
     const wContas = whereData('data_pagamento', periodo);
 
     const rv = (await pool.query(
@@ -37,12 +36,6 @@ module.exports = (pool) => {
               COALESCE(SUM(quantidade),0) as qtd
        FROM vendas ${wVendas.clausula}`,
       wVendas.params
-    )).rows[0];
-
-    const rs = (await pool.query(
-      `SELECT COALESCE(SUM(valor),0) as total_saidas
-       FROM saidas ${wSaidas.clausula}`,
-      wSaidas.params
     )).rows[0];
 
     // Contas a pagar efetivamente pagas entram como despesa do período.
@@ -54,15 +47,12 @@ module.exports = (pool) => {
       wContas.params
     )).rows[0];
 
-    const despesasTotais = rs.total_saidas + rc.total_pago;
-    const lucroLiquido = rv.vendas - rv.custos - despesasTotais;
+    const lucroLiquido = rv.vendas - rv.custos - rc.total_pago;
 
     res.json({
       total_vendas: rv.vendas,
       custos: rv.custos,
-      saidas: rs.total_saidas,
       contas_pagas: rc.total_pago,
-      despesas_totais: despesasTotais,
       lucro_liquido: lucroLiquido,
       qtd_vendida: rv.qtd,
       ticket_medio: rv.qtd > 0 ? rv.vendas / rv.qtd : 0,
@@ -81,7 +71,6 @@ module.exports = (pool) => {
     const formato = agrupar === 'mes' ? 'YYYY-MM' : 'YYYY-MM-DD';
 
     const wv = whereData('data', periodo);
-    const ws = whereData('data', periodo);
     const wc = whereData('data_pagamento', periodo);
 
     const vendas = (await pool.query(
@@ -91,14 +80,6 @@ module.exports = (pool) => {
        FROM vendas ${wv.clausula}
        GROUP BY periodo ORDER BY periodo`,
       wv.params
-    )).rows;
-
-    const saidas = (await pool.query(
-      `SELECT to_char(data::timestamptz, '${formato}') as periodo,
-              COALESCE(SUM(valor),0) as gastos
-       FROM saidas ${ws.clausula}
-       GROUP BY periodo ORDER BY periodo`,
-      ws.params
     )).rows;
 
     const contas = (await pool.query(
@@ -111,7 +92,7 @@ module.exports = (pool) => {
       wc.params
     )).rows;
 
-    res.json({ vendas, saidas, contas });
+    res.json({ vendas, contas });
   });
 
   // ---------- /api/dashboard/top-produtos ----------
