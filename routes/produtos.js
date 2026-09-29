@@ -18,9 +18,24 @@ module.exports = (pool) => {
     res.json({ ok: true, id: rows[0].id });
   });
 
+  // Excluir produto: o histórico (movimentos e itens de compra) é mantido e
+  // passa a aparecer como "(produto excluído)". Sem isso, as chaves
+  // estrangeiras impediam excluir qualquer produto que já teve movimento.
   router.delete('/:id', async (req, res) => {
-    await pool.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
-    res.json({ ok: true });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE estoque_movimentos SET produto_id = NULL WHERE produto_id = $1', [req.params.id]);
+      await client.query('UPDATE compra_itens SET produto_id = NULL WHERE produto_id = $1', [req.params.id]);
+      await client.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
+      await client.query('COMMIT');
+      res.json({ ok: true });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      res.status(500).json({ error: e.message });
+    } finally {
+      client.release();
+    }
   });
   // Editar cadastro. Se a quantidade mudar, registra um movimento de "ajuste"
   // (auditoria: fica claro em Movimentos que o estoque foi corrigido à mão).
