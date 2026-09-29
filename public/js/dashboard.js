@@ -239,6 +239,7 @@ async function carregarMetaCaixa() {
     const tabela = tbody.closest('table');
 
     document.getElementById('caixa-media').innerText = formatarMoeda(d.media_diaria_vendas);
+    document.getElementById('caixa-a-receber').innerText = formatarMoeda(d.a_receber);
 
     if (d.saldo_informado === null) {
         info.innerHTML = 'Informe o saldo atual da conta de vendas para calcular quanto falta para pagar as contas.';
@@ -255,6 +256,7 @@ async function carregarMetaCaixa() {
     const ajustes = [];
     if (d.vendas_desde)       ajustes.push(`+ ${formatarMoeda(d.vendas_desde)} em vendas`);
     if (d.contas_pagas_desde) ajustes.push(`− ${formatarMoeda(d.contas_pagas_desde)} em contas pagas`);
+    if (d.compras_vista_desde) ajustes.push(`− ${formatarMoeda(d.compras_vista_desde)} em compras à vista`);
     info.innerHTML = `Saldo informado: ${formatarMoeda(d.saldo_informado)} em ${quando}`
         + (ajustes.length ? ` · desde então: ${ajustes.join(', ')}` : '');
 
@@ -289,9 +291,12 @@ async function carregarMetaCaixa() {
             : `No ritmo atual (${formatarMoeda(d.media_diaria_vendas)}/dia) você junta esse valor em ~${p.diasNoRitmo} dia(s)`
               + (p.status === 'no-ritmo' ? ' ✅ dá tempo.' : ' ⚠️ acima do prazo.');
         destaque.className = 'caixa-destaque ' + (p.status === 'no-ritmo' ? 'ok' : 'alerta');
+        const fiado = d.a_receber > 0
+            ? ` · Você também tem ${formatarMoeda(d.a_receber)} em fiado a receber (${d.a_receber_qtd} venda(s)).`
+            : '';
         destaque.innerHTML = `Faltam <strong>${formatarMoeda(p.falta)}</strong> para pagar
             <strong>${p.descricao}</strong> (${formatarMoeda(p.valor)}, ${textoPrazo(p)}).
-            Você precisa vender ${prazo}.<br><small>${ritmo}</small>`;
+            Você precisa vender ${prazo}.<br><small>${ritmo}${fiado}</small>`;
     }
 
     tabela.style.display = plano.itens.length ? '' : 'none';

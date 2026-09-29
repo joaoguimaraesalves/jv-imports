@@ -1,36 +1,25 @@
 // routes/caixa.js
 // Saldo da conta de vendas + dados para o planejamento de caixa (Meta de Caixa).
-// O saldo é informado manualmente; a partir daí o sistema estima o saldo atual
-// somando as vendas e descontando as contas pagas registradas depois.
+// O saldo é informado manualmente; o cálculo do saldo estimado está em
+// lib/financeiro.js (saldoConta).
 const express = require('express');
+const { saldoConta } = require('../lib/financeiro');
 
 module.exports = (pool) => {
   const router = express.Router();
 
   router.get('/', async (req, res) => {
-    const cfg = (await pool.query(
-      `SELECT valor, atualizado_em FROM configuracoes WHERE chave = 'saldo_conta'`
-    )).rows[0];
-
-    const saldoInformado = cfg ? parseFloat(cfg.valor) : null;
-    const desde = cfg ? cfg.atualizado_em : null;
-
-    let vendasDesde = 0, contasPagasDesde = 0;
-    if (desde) {
-      vendasDesde = (await pool.query(
-        'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data > $1', [desde]
-      )).rows[0].total;
-      contasPagasDesde = (await pool.query(
-        `SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar
-         WHERE status = 'paga' AND data_pagamento > $1`, [desde]
-      )).rows[0].total;
-    }
+    const saldo = await saldoConta(pool);
 
     // Ritmo de vendas: faturamento dos últimos 30 dias
     const inicio30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const faturamento30d = (await pool.query(
-      'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data >= $1', [inicio30d]
+      'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data >= $1 AND NOT historico', [inicio30d]
     )).rows[0].total;
+
+    const aReceber = (await pool.query(
+      'SELECT COALESCE(SUM(valor),0) as total, COUNT(*) as qtd FROM vendas WHERE NOT recebido'
+    )).rows[0];
 
     const contasPendentes = (await pool.query(
       `SELECT id, descricao, valor, vencimento FROM contas_pagar
@@ -39,16 +28,12 @@ module.exports = (pool) => {
     )).rows;
 
     res.json({
-      saldo_informado: saldoInformado,
-      saldo_atualizado_em: desde,
-      vendas_desde: vendasDesde,
-      contas_pagas_desde: contasPagasDesde,
-      saldo_estimado: saldoInformado === null
-        ? null
-        : saldoInformado + vendasDesde - contasPagasDesde,
+      ...saldo,
       faturamento_30d: faturamento30d,
       media_diaria_vendas: faturamento30d / 30,
       contas_pendentes: contasPendentes,
+      a_receber: aReceber.total,
+      a_receber_qtd: aReceber.qtd,
     });
   });
 

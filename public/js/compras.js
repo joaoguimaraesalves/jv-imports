@@ -11,6 +11,9 @@ async function abrirModalCompra() {
     document.getElementById('compra-desc').value = '';
     document.getElementById('compra-pagamento').value = 'dinheiro';
     document.getElementById('compra-parcelas').value = 1;
+    document.getElementById('compra-tipo').value = 'atual';
+    document.getElementById('compra-data').value = '';
+    mudarTipoCompra();
     toggleParcelas();
     adicionarItemCompra();
     abrirModal('modal-compra');
@@ -18,7 +21,19 @@ async function abrirModalCompra() {
 
 function toggleParcelas() {
     const pagamento = document.getElementById('compra-pagamento').value;
-    document.getElementById('grupo-parcelas').style.display = pagamento === 'cartao' ? 'block' : 'none';
+    const historico = document.getElementById('compra-tipo').value === 'historico';
+    document.getElementById('grupo-parcelas').style.display = pagamento === 'cartao' && !historico ? 'block' : 'none';
+}
+
+// Compra antiga: pede a data real do pedido; não gera conta a pagar
+function mudarTipoCompra() {
+    const historico = document.getElementById('compra-tipo').value === 'historico';
+    document.getElementById('grupo-compra-data').style.display = historico ? 'block' : 'none';
+    document.getElementById('compra-tipo-info').style.display = historico ? 'block' : 'none';
+    const data = document.getElementById('compra-data');
+    data.required = historico;
+    data.max = dataLocalISO();
+    toggleParcelas();
 }
 
 function adicionarItemCompra() {
@@ -120,6 +135,8 @@ async function salvarCompra(event) {
         descricao:       document.getElementById('compra-desc').value,
         forma_pagamento: document.getElementById('compra-pagamento').value,
         parcelas:        parseInt(document.getElementById('compra-parcelas').value) || 1,
+        historico:       document.getElementById('compra-tipo').value === 'historico',
+        data:            document.getElementById('compra-data').value || null,
         itens:           itensValidos.map(it => ({
             produto_id:     it.produto_id || null,
             produto_nome:   it.produto_nome,
@@ -138,6 +155,7 @@ async function salvarCompra(event) {
     }
 
     fecharModal('modal-compra');
+    if (document.getElementById('tela-historico').classList.contains('active')) carregarHistorico();
     carregarCompras();
     carregarDashboard();
     desenharGrafico();
@@ -156,11 +174,12 @@ async function carregarCompras() {
     }
 
     compras.forEach(c => {
-        const parcelasTxt = c.parcelas > 1 ? ` (${c.parcelas}x)` : ' (à vista)';
+        const parcelasTxt = c.historico ? '' : c.forma_pagamento === 'cartao' ? ` (${c.parcelas}x)` : ' (à vista)';
+        const tag = c.historico ? ' <span class="badge badge-ajuste">Histórico</span>' : '';
         tbody.innerHTML += `
             <tr>
                 <td>${new Date(c.data).toLocaleDateString('pt-BR')}</td>
-                <td><strong>${c.descricao || '—'}</strong></td>
+                <td><strong>${c.descricao || '—'}</strong>${tag}</td>
                 <td style="text-transform: capitalize;">${c.forma_pagamento}${parcelasTxt}</td>
                 <td style="color: var(--color-blue);">${formatarMoeda(c.valor_total)}</td>
                 <td><button class="btn-excluir" onclick="excluirCompra(${c.id})">Excluir</button></td>

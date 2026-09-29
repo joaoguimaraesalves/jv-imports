@@ -16,6 +16,7 @@ app.use('/api/compras',      require('./routes/compras')(pool));
 app.use('/api/contas-pagar', require('./routes/contas-pagar')(pool));
 app.use('/api/estoque',      require('./routes/estoque')(pool));
 app.use('/api/caixa',        require('./routes/caixa')(pool));
+app.use('/api/historico',    require('./routes/historico')(pool));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 

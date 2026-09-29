@@ -321,6 +321,56 @@ select {
 .caixa-tabela th, .caixa-tabela td { padding: 10px 15px; }
 .caixa-prazo { display: block; color: var(--text-muted); font-size: 0.75rem; }
 
+/* ===== Vendas fiado ===== */
+.badge { white-space: nowrap; }
+.venda-cliente { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
+.btn-mini { padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
+
+/* ===== Histórico da Loja ===== */
+.hist-detalhe:empty { display: none; }
+.hist-detalhe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: -15px 0 25px;
+    padding: 12px 15px;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.hist-detalhe strong { color: var(--text-main); }
+.hist-passos { padding-left: 20px; line-height: 1.6; color: var(--text-muted); }
+.hist-passos li { margin-bottom: 6px; }
+.hist-passos strong { color: var(--text-main); }
+.hist-passos a { color: var(--color-green); }
+.hist-tabela { margin-top: 10px; }
+.hist-tabela th, .hist-tabela td { padding: 10px 15px; }
+.input-tabela {
+    width: 110px;
+    padding: 7px 9px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    outline: none;
+}
+.input-tabela:focus { border-color: var(--color-green); }
+.input-tabela:disabled { opacity: 0.4; }
+.input-tabela.input-alerta { border-color: var(--color-orange); }
+.hist-acerto-rodape {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+.hist-acerto-rodape .btn-blue:disabled { opacity: 0.5; cursor: not-allowed; }
+.compra-tipo-info { display: block; color: var(--text-muted); font-size: 0.8rem; margin: -5px 0 15px; }
+
 /* ===== Tema claro/escuro: botão de alternância ===== */
 .sidebar-footer {
     margin-top: auto;

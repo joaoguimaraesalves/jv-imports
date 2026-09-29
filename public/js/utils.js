@@ -8,7 +8,12 @@ async function fetchJSON(url, options = {}) {
         headers: { 'Content-Type': 'application/json' },
         ...options
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+        // Mostra a mensagem do servidor (ex.: "só há 3 no estoque") quando houver
+        let msg = `HTTP ${res.status}`;
+        try { const corpo = await res.json(); if (corpo.error) msg = corpo.error; } catch (e) {}
+        throw new Error(msg);
+    }
     return res.json();
 }
 
