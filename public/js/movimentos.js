@@ -26,8 +26,9 @@ async function carregarMovimentos() {
 
     movs.forEach(m => {
         const badge = `<span class="badge badge-${m.tipo}">${m.tipo}</span>`;
-        const sinal = m.tipo === 'entrada' ? '+' : '-';
-        const cor = m.tipo === 'entrada' ? 'var(--color-green)' : 'var(--color-red)';
+        // Ajuste manual guarda a diferença com sinal (+ ou −)
+        const sinal = m.tipo === 'entrada' ? '+' : m.tipo === 'ajuste' ? (m.quantidade > 0 ? '+' : '') : '-';
+        const cor = m.tipo === 'entrada' ? 'var(--color-green)' : m.tipo === 'ajuste' ? 'var(--color-purple)' : 'var(--color-red)';
 
         tbody.innerHTML += `
             <tr>

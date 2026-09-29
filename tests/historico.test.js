@@ -15,13 +15,13 @@ describe('calcularAcertoEstoque', () => {
     const r = calcularAcertoEstoque(produtos, { 1: { real: '4' } });
     const fone = r.linhas.find(l => l.produto_id === 1);
     expect(fone).toMatchObject({ vendidas: 6, valor: 540, custo: 240, lucro: 300 });
-    expect(r.itens).toEqual([{ produto_id: 1, quantidade: 6, valor: 540 }]);
+    expect(r.itens).toEqual([{ produto_id: 1, quantidade: 6, preco: 90, valor: 540 }]);
     expect(r.totais).toEqual({ unidades: 6, valor: 540, custo: 240, lucro: 300, semValor: 0 });
   });
 
-  test('valor recebido informado substitui a sugestão (preço × qtd)', () => {
-    const r = calcularAcertoEstoque(produtos, { 2: { real: 0, valor: '750' } });
-    expect(r.itens).toEqual([{ produto_id: 2, quantidade: 5, valor: 750 }]);
+  test('preço de venda digitado substitui o do banco (total = preço × vendidas)', () => {
+    const r = calcularAcertoEstoque(produtos, { 2: { real: 0, preco: '150' } });
+    expect(r.itens).toEqual([{ produto_id: 2, quantidade: 5, preco: 150, valor: 750 }]);
     expect(r.totais.lucro).toBe(250);
   });
 
@@ -33,10 +33,11 @@ describe('calcularAcertoEstoque', () => {
   });
 });
 
-test('produto sem preço de venda exige valor informado', () => {
+test('produto sem preço de venda exige preço informado', () => {
   const semPreco = [{ id: 9, nome: 'Novo', quantidade: 4, custo: 10, preco: 0 }];
   expect(calcularAcertoEstoque(semPreco, { 9: { real: 1 } }).totais.semValor).toBe(1);
-  expect(calcularAcertoEstoque(semPreco, { 9: { real: 1, valor: '90' } }).totais.semValor).toBe(0);
+  const r = calcularAcertoEstoque(semPreco, { 9: { real: 1, preco: '30' } });
+  expect(r.totais).toMatchObject({ semValor: 0, valor: 90, lucro: 60 });
 });
 
 describe('fimDoMesAnterior', () => {

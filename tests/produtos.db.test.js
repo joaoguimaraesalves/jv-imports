@@ -18,11 +18,22 @@ bloco('Integração com Postgres — CRUD de produtos', () => {
     await initDb(pool); // garante que as tabelas existem
   });
 
+  // Remove o que o teste deixa no banco real: produtos "TESTECI..." (inclusive
+  // de execuções antigas que falharam no meio) e os movimentos deles.
+  async function limparProdutosDeTeste() {
+    await pool.query(
+      `DELETE FROM estoque_movimentos
+       WHERE produto_id IN (SELECT id FROM produtos WHERE nome LIKE 'TESTECI%')`
+    );
+    await pool.query(`DELETE FROM produtos WHERE nome LIKE 'TESTECI%'`);
+  }
+
   afterAll(async () => {
-    if (criadoId) {
-      await pool.query('DELETE FROM produtos WHERE id = $1', [criadoId]);
+    try {
+      await limparProdutosDeTeste();
+    } finally {
+      await pool.end(); // fecha a conexão pro Jest não travar
     }
-    await pool.end(); // fecha a conexão pro Jest não travar
   });
 
   test('cria, edita e exclui um produto no banco real', async () => {
@@ -48,6 +59,14 @@ bloco('Integração com Postgres — CRUD de produtos', () => {
       .send({ nome, custo: 12, preco: 30, quantidade: 8 });
     expect(put.status).toBe(200);
     expect(Number(put.body.produto.quantidade)).toBe(8);
+
+    // A edição mudou a quantidade (5 → 8): fica registrado um movimento de ajuste
+    const movs = await pool.query(
+      `SELECT quantidade FROM estoque_movimentos WHERE produto_id = $1 AND tipo = 'ajuste'`, [criadoId]
+    );
+    expect(movs.rows.map((m) => m.quantidade)).toEqual([3]);
+    // Apaga o movimento de teste antes de excluir, pra não deixar lixo no banco real
+    await pool.query('DELETE FROM estoque_movimentos WHERE produto_id = $1', [criadoId]);
 
     // DELETE
     const del = await request(app).delete(`/api/produtos/${criadoId}`);

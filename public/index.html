@@ -141,7 +141,7 @@
         <div id="tela-produtos" class="tela">
             <div class="header">
                 <h2>Estoque da Loja</h2>
-                <button class="btn-blue" onclick="abrirModal('modal-produto')">+ Cadastrar Produto</button>
+                <button class="btn-blue" onclick="abrirModalProduto()">+ Cadastrar Produto</button>
             </div>
             <table>
                 <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>Ações</th></tr></thead>
@@ -249,9 +249,9 @@
                         <input type="date" id="hist-data-corte">
                     </div>
                 </div>
-                <p class="caixa-saldo-info">Deixe em branco os produtos que já estão certos. O valor recebido vem sugerido pelo preço de venda × quantidade; ajuste se vendeu mais barato.</p>
+                <p class="caixa-saldo-info">Deixe em branco os produtos que já estão certos. O preço de venda vem do cadastro do produto (Estoque da Loja → Editar); dá pra ajustar aqui se vendeu por outro valor. Total = preço × vendidas.</p>
                 <table class="hist-tabela">
-                    <thead><tr><th>Produto</th><th>No sistema</th><th>Estoque real hoje</th><th>Vendidas antes</th><th>Valor recebido (R$)</th><th>Lucro</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>No sistema</th><th>Estoque real hoje</th><th>Vendidas antes</th><th>Preço de venda (un.)</th><th>Total recebido</th><th>Lucro</th></tr></thead>
                     <tbody id="hist-acerto-lista"></tbody>
                 </table>
                 <div class="hist-acerto-rodape">
@@ -333,14 +333,14 @@
     <div id="modal-produto" class="modal-overlay">
         <div class="modal-content">
             <form onsubmit="salvarProduto(event)">
-                <h3>Cadastrar Produto</h3>
+                <h3 id="prod-titulo">Cadastrar Produto</h3>
                 <div class="form-group"><label>Nome do Produto</label><input type="text" id="prod-nome" required placeholder="Ex: Fone Bluetooth"></div>
                 <div class="form-group"><label>Custo do Produto (Quanto você pagou?)</label><input type="number" id="prod-custo" step="0.01" required placeholder="Ex: 50.00"></div>
                 <div class="form-group"><label>Preço de Venda Final (R$)</label><input type="number" id="prod-preco" step="0.01" required placeholder="Ex: 120.00"></div>
-                <div class="form-group"><label>Quantidade Inicial no Estoque</label><input type="number" id="prod-qtd" required placeholder="Ex: 10"></div>
+                <div class="form-group"><label id="prod-qtd-label">Quantidade Inicial no Estoque</label><input type="number" id="prod-qtd" min="0" required placeholder="Ex: 10"></div>
                 <div class="modal-actions">
                     <button type="button" class="btn-gray" onclick="fecharModal('modal-produto')">Cancelar</button>
-                    <button type="submit" class="btn-blue">Salvar Produto</button>
+                    <button type="submit" class="btn-blue" id="prod-salvar">Salvar Produto</button>
                 </div>
             </form>
         </div>
