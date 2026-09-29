@@ -46,7 +46,8 @@ async function salvarConta(event) {
     const corpo = {
         descricao:  document.getElementById('conta-desc').value,
         valor:      parseFloat(document.getElementById('conta-valor').value),
-        vencimento: document.getElementById('conta-vencimento').value
+        vencimento: document.getElementById('conta-vencimento').value,
+        paga:       document.getElementById('conta-tipo').value === 'paga'
     };
 
     try {
@@ -59,11 +60,20 @@ async function salvarConta(event) {
     }
 
     event.target.reset();
+    mudarTipoConta();
     fecharModal('modal-conta');
     carregarContasPagar();
 if (document.getElementById('tela-dashboard').classList.contains('active')) {
     atualizarDashboardCompleto();
 }
+}
+
+// "Conta paga": registra direto como paga (desconta do saldo na hora)
+function mudarTipoConta() {
+    const paga = document.getElementById('conta-tipo').value === 'paga';
+    const venc = document.getElementById('conta-vencimento');
+    document.getElementById('conta-vencimento-label').innerText = paga ? 'Data' : 'Vencimento';
+    if (paga && !venc.value) venc.value = dataLocalISO();
 }
 
 async function pagarConta(id) {

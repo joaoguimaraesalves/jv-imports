@@ -98,7 +98,7 @@ async function desenharGrafico() {
     const periodos     = periodosDoFiltro(estadoDashboard.periodo, estadoDashboard.agrupar, Object.keys(porPeriodo));
     periodos.forEach(garantir);
     const faturamentos = periodos.map(p => porPeriodo[p].faturamento);
-    const lucros       = periodos.map(p => porPeriodo[p].faturamento - porPeriodo[p].custo - porPeriodo[p].gastos);
+    const lucros       = periodos.map(p => porPeriodo[p].faturamento - porPeriodo[p].custo);
     const gastos       = periodos.map(p => porPeriodo[p].gastos);
 
     // Formata rótulos do eixo X conforme o agrupamento (dia ou mês)
@@ -267,7 +267,11 @@ async function carregarMetaCaixa() {
 
     document.getElementById('caixa-saldo').innerText    = formatarMoeda(d.saldo_estimado);
     document.getElementById('caixa-pendente').innerText = formatarMoeda(plano.totalPendente);
-    document.getElementById('caixa-falta').innerText    = formatarMoeda(plano.faltaTotal);
+    // Com as contas cobertas, o que sobra no saldo é lucro livre para retirar
+    const faltando = plano.faltaTotal > 0;
+    document.getElementById('caixa-falta-label').innerText = faltando ? 'Falta arrecadar' : 'Sobra (lucro livre)';
+    document.getElementById('caixa-falta').innerText = formatarMoeda(faltando ? plano.faltaTotal : plano.sobra);
+    document.getElementById('caixa-falta').style.color = faltando ? 'var(--color-red)' : 'var(--color-green)';
 
     const p = plano.proxima;
     if (plano.itens.length === 0) {

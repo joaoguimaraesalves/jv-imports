@@ -19,15 +19,17 @@ module.exports = (pool) => {
   });
 
   // Lançamento manual (fora de uma compra). Útil pra aluguel ou algo avulso.
+  // Com "paga: true" a conta já entra como paga (desconta do saldo na hora).
   router.post('/', async (req, res) => {
-    const { descricao, valor, vencimento } = req.body;
+    const { descricao, valor, vencimento, paga } = req.body;
     if (!descricao || !valor || !vencimento) {
       return res.status(400).json({ error: 'descricao, valor e vencimento são obrigatórios' });
     }
     const { rows } = await pool.query(
-      `INSERT INTO contas_pagar (descricao, valor, vencimento, status)
-       VALUES ($1, $2, $3, 'pendente') RETURNING id`,
-      [descricao, parseFloat(valor), vencimento]
+      `INSERT INTO contas_pagar (descricao, valor, vencimento, status, data_pagamento)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [descricao, parseFloat(valor), vencimento,
+       paga ? 'paga' : 'pendente', paga ? new Date().toISOString() : null]
     );
     res.json({ ok: true, id: rows[0].id });
   });

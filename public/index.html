@@ -85,7 +85,7 @@
         <div class="caixa-resumo">
             <div><span>Saldo estimado</span><strong id="caixa-saldo">--</strong></div>
             <div><span>Contas pendentes</span><strong id="caixa-pendente">--</strong></div>
-            <div><span>Falta arrecadar</span><strong id="caixa-falta">--</strong></div>
+            <div><span id="caixa-falta-label">Falta arrecadar</span><strong id="caixa-falta">--</strong></div>
             <div><span>Média de vendas/dia (30d)</span><strong id="caixa-media">--</strong></div>
         </div>
         <div id="caixa-destaque" class="caixa-destaque"></div>
@@ -306,10 +306,17 @@
     <div id="modal-conta" class="modal-overlay">
         <div class="modal-content">
             <form onsubmit="salvarConta(event)">
-                <h3>Lançar Conta a Pagar</h3>
+                <h3>Lançar Conta</h3>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="conta-tipo" onchange="mudarTipoConta()">
+                        <option value="pagar">Pagar conta (fica pendente)</option>
+                        <option value="paga">Conta paga (já saiu do saldo)</option>
+                    </select>
+                </div>
                 <div class="form-group"><label>Descrição</label><input type="text" id="conta-desc" required placeholder="Ex: Aluguel"></div>
                 <div class="form-group"><label>Valor (R$)</label><input type="number" id="conta-valor" step="0.01" required></div>
-                <div class="form-group"><label>Vencimento</label><input type="date" id="conta-vencimento" required></div>
+                <div class="form-group"><label id="conta-vencimento-label">Vencimento</label><input type="date" id="conta-vencimento" required></div>
                 <div class="modal-actions">
                     <button type="button" class="btn-gray" onclick="fecharModal('modal-conta')">Cancelar</button>
                     <button type="submit" class="btn-blue">Salvar</button>
