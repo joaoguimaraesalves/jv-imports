@@ -70,6 +70,13 @@ async function initDb(pool) {
       valor TEXT,
       atualizado_em TEXT
     );
+
+    -- Vendas fiado: o cliente leva agora e paga depois.
+    -- Vendas antigas ficam como recebidas (DEFAULT true).
+    ALTER TABLE vendas ADD COLUMN IF NOT EXISTS recebido BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE vendas ADD COLUMN IF NOT EXISTS cliente TEXT;
+    ALTER TABLE vendas ADD COLUMN IF NOT EXISTS receber_ate TEXT;
+    ALTER TABLE vendas ADD COLUMN IF NOT EXISTS data_recebimento TEXT;
   `);
 
   console.log('Banco de dados da JV Imports (Postgres/Neon) conectado!');

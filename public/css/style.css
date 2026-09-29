@@ -321,6 +321,11 @@ select {
 .caixa-tabela th, .caixa-tabela td { padding: 10px 15px; }
 .caixa-prazo { display: block; color: var(--text-muted); font-size: 0.75rem; }
 
+/* ===== Vendas fiado ===== */
+.badge { white-space: nowrap; }
+.venda-cliente { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
+.btn-mini { padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
+
 /* ===== Tema claro/escuro: botão de alternância ===== */
 .sidebar-footer {
     margin-top: auto;

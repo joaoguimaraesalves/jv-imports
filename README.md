@@ -82,6 +82,7 @@ npm test
 |--------|------|-----------|
 | GET/POST/PUT/DELETE | `/api/produtos` | CRUD de produtos |
 | GET/POST/DELETE | `/api/vendas` | Vendas (baixa estoque em transação) |
+| PATCH | `/api/vendas/:id/receber` | Marca venda fiado como recebida |
 | GET/POST/DELETE | `/api/compras` | Compras com itens e parcelamento |
 | GET/POST/PATCH/DELETE | `/api/contas-pagar` | Contas a pagar |
 | GET | `/api/estoque/movimentos` | Histórico de movimentação |

@@ -12,22 +12,34 @@ module.exports = (pool) => {
   // Criar venda: insere a venda, baixa o estoque e registra o movimento,
   // tudo dentro de uma transação (BEGIN/COMMIT). Se algo falhar, ROLLBACK
   // e nada fica salvo pela metade.
+  // Fiado: "recebido: false" + cliente + receber_ate (data combinada).
   router.post('/', async (req, res) => {
+    const agora = new Date().toISOString();
+    const recebido = req.body.recebido !== false;
     const venda = {
       ...req.body,
       forma_pagamento: req.body.forma_pagamento || null,
-      data: new Date().toISOString(),
+      data: agora,
+      recebido,
+      cliente: req.body.cliente || null,
+      receber_ate: recebido ? null : (req.body.receber_ate || null),
+      data_recebimento: recebido ? agora : null,
     };
+    if (!recebido && !venda.cliente) {
+      return res.status(400).json({ error: 'Informe o cliente da venda fiado' });
+    }
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
       const insVenda = await client.query(
-        `INSERT INTO vendas (produto_id, produto_nome, quantidade, valor, custo, forma_pagamento, data)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        `INSERT INTO vendas (produto_id, produto_nome, quantidade, valor, custo, forma_pagamento, data,
+                             recebido, cliente, receber_ate, data_recebimento)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
         [venda.produto_id, venda.produto_nome, venda.quantidade, venda.valor,
-         venda.custo, venda.forma_pagamento, venda.data]
+         venda.custo, venda.forma_pagamento, venda.data,
+         venda.recebido, venda.cliente, venda.receber_ate, venda.data_recebimento]
       );
       const vendaId = insVenda.rows[0].id;
 
@@ -54,6 +66,26 @@ module.exports = (pool) => {
     } finally {
       client.release();
     }
+  });
+
+  // Fiado: marca que o cliente pagou (o valor entra no saldo a partir de agora)
+  router.patch('/:id/receber', async (req, res) => {
+    const { rowCount } = await pool.query(
+      `UPDATE vendas SET recebido = true, data_recebimento = $1 WHERE id = $2 AND recebido = false`,
+      [new Date().toISOString(), req.params.id]
+    );
+    if (!rowCount) return res.status(400).json({ error: 'Venda não encontrada ou já recebida' });
+    res.json({ ok: true });
+  });
+
+  // Útil se marcar como recebido por engano
+  router.patch('/:id/desfazer-recebimento', async (req, res) => {
+    const { rowCount } = await pool.query(
+      `UPDATE vendas SET recebido = false, data_recebimento = NULL WHERE id = $1 AND receber_ate IS NOT NULL`,
+      [req.params.id]
+    );
+    if (!rowCount) return res.status(400).json({ error: 'Só dá pra desfazer o recebimento de venda fiado' });
+    res.json({ ok: true });
   });
 
   // Excluir venda: devolve o estoque e remove o movimento, em transação.

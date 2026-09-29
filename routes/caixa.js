@@ -1,7 +1,8 @@
 // routes/caixa.js
 // Saldo da conta de vendas + dados para o planejamento de caixa (Meta de Caixa).
 // O saldo é informado manualmente; a partir daí o sistema estima o saldo atual
-// somando as vendas e descontando as contas pagas registradas depois.
+// somando as vendas recebidas e descontando as contas pagas registradas depois.
+// Venda fiado só entra no saldo quando é marcada como recebida.
 const express = require('express');
 
 module.exports = (pool) => {
@@ -18,7 +19,8 @@ module.exports = (pool) => {
     let vendasDesde = 0, contasPagasDesde = 0;
     if (desde) {
       vendasDesde = (await pool.query(
-        'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data > $1', [desde]
+        `SELECT COALESCE(SUM(valor),0) as total FROM vendas
+         WHERE recebido AND COALESCE(data_recebimento, data) > $1`, [desde]
       )).rows[0].total;
       contasPagasDesde = (await pool.query(
         `SELECT COALESCE(SUM(valor),0) as total FROM contas_pagar
@@ -31,6 +33,10 @@ module.exports = (pool) => {
     const faturamento30d = (await pool.query(
       'SELECT COALESCE(SUM(valor),0) as total FROM vendas WHERE data >= $1', [inicio30d]
     )).rows[0].total;
+
+    const aReceber = (await pool.query(
+      'SELECT COALESCE(SUM(valor),0) as total, COUNT(*) as qtd FROM vendas WHERE NOT recebido'
+    )).rows[0];
 
     const contasPendentes = (await pool.query(
       `SELECT id, descricao, valor, vencimento FROM contas_pagar
@@ -49,6 +55,8 @@ module.exports = (pool) => {
       faturamento_30d: faturamento30d,
       media_diaria_vendas: faturamento30d / 30,
       contas_pendentes: contasPendentes,
+      a_receber: aReceber.total,
+      a_receber_qtd: aReceber.qtd,
     });
   });
 
