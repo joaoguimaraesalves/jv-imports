@@ -22,11 +22,11 @@ module.exports = (pool) => {
     await pool.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   });
-   router.put('/:id', async (req, res) => {
+  router.put('/:id', async (req, res) => {
     const { nome, custo, preco, quantidade } = req.body;
     const { rows } = await pool.query(
-      UPDATE produtos SET nome = $1, custo = $2, preco = $3, quantidade = $4
-       WHERE id = $5 RETURNING *,
+      `UPDATE produtos SET nome = $1, custo = $2, preco = $3, quantidade = $4
+       WHERE id = $5 RETURNING *`,
       [nome, custo, preco, quantidade, req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Produto não encontrado' });

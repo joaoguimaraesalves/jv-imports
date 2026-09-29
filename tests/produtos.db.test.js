@@ -44,13 +44,13 @@ bloco('Integração com Postgres — CRUD de produtos', () => {
 
     // UPDATE (funcionalidade nova do PR 2)
     const put = await request(app)
-      .put(/api/produtos/${criadoId})
+      .put(`/api/produtos/${criadoId}`)
       .send({ nome, custo: 12, preco: 30, quantidade: 8 });
     expect(put.status).toBe(200);
     expect(Number(put.body.produto.quantidade)).toBe(8);
 
     // DELETE
-    const del = await request(app).delete(/api/produtos/${criadoId});
+    const del = await request(app).delete(`/api/produtos/${criadoId}`);
     expect(del.status).toBe(200);
     criadoId = null; // já limpou
   });

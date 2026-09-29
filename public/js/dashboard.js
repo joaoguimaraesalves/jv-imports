@@ -39,6 +39,17 @@ async function carregarDashboard() {
     document.getElementById('val-margem').innerText   = d.margem + '%';
 }
 
+// Lê as cores do tema atual (variáveis CSS do :root) para o Chart.js
+function coresTema() {
+    const estilo = getComputedStyle(document.documentElement);
+    const escuro = document.documentElement.getAttribute('data-theme') !== 'light';
+    return {
+        texto: estilo.getPropertyValue('--text-main').trim() || '#F8FAFC',
+        suave: estilo.getPropertyValue('--text-muted').trim() || '#94A3B8',
+        grid:  escuro ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.15)'
+    };
+}
+
 async function desenharGrafico() {
     const { vendas, saidas, contas } = await fetchJSON(
         `/api/dashboard/grafico?periodo=${estadoDashboard.periodo}&agrupar=${estadoDashboard.agrupar}`
@@ -70,6 +81,7 @@ async function desenharGrafico() {
         return `${dia}/${mes}`;
     });
 
+    const cores = coresTema();
     if (meuGrafico) meuGrafico.destroy();
     meuGrafico = new Chart(document.getElementById('graficoEvolucao').getContext('2d'), {
         type: 'bar',
@@ -85,7 +97,7 @@ async function desenharGrafico() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { labels: { color: '#F8FAFC' } },
+                legend: { labels: { color: cores.texto } },
                 tooltip: {
                     callbacks: {
                         // Formatar valor no tooltip como moeda BRL
@@ -95,12 +107,12 @@ async function desenharGrafico() {
             },
             scales: {
                 x: {
-                    ticks: { color: '#94A3B8' },
-                    grid:  { color: 'rgba(148,163,184,0.1)' }
+                    ticks: { color: cores.suave },
+                    grid:  { color: cores.grid }
                 },
                 y: {
                     ticks: {
-                        color: '#94A3B8',
+                        color: cores.suave,
                         // Mostrar valores do eixo como R$ abreviado (R$ 1.2k, R$ 3M)
                         callback: (v) => {
                             if (v >= 1000000) return 'R$ ' + (v/1000000).toFixed(1) + 'M';
@@ -108,7 +120,7 @@ async function desenharGrafico() {
                             return 'R$ ' + v;
                         }
                     },
-                    grid: { color: 'rgba(148,163,184,0.1)' }
+                    grid: { color: cores.grid }
                 }
             }
         }
@@ -163,60 +175,3 @@ async function carregarProximasContas() {
             </div>`;
     });
 }
-
-async function carregarCotacao() {
-  const elUsd = document.getElementById('cotacao-usd');
-  const elEur = document.getElementById('cotacao-eur');
-  const elVarUsd = document.getElementById('variacao-usd');
-  const elVarEur = document.getElementById('variacao-eur');
-  const cardUsd = elUsd.closest('.cotacao-card');
-  const cardEur = elEur.closest('.cotacao-card');
-
-  // Estado de carregamento
-  elUsd.textContent = '...';
-  elEur.textContent = '...';
-  elVarUsd.textContent = '';
-  elVarEur.textContent = '';
-  cardUsd.classList.remove('erro');
-  cardEur.classList.remove('erro');
-
-  try {
-    console.log('[Cotação] Buscando /api/cotacao...');
-    const res = await fetch('/api/cotacao');
-    console.log('[Cotação] Status:', res.status);
-
-    if (!res.ok) {
-      throw new Error('HTTP ' + res.status);
-    }
-
-    const data = await res.json();
-    console.log('[Cotação] Dados recebidos:', data);
-
-    // USD
-    elUsd.textContent = 'R$ ' + data.usd.valor.toFixed(2);
-    const sinalUsd = data.usd.variacao >= 0 ? '▲' : '▼';
-    elVarUsd.textContent = sinalUsd + ' ' + Math.abs(data.usd.variacao).toFixed(2) + '%';
-
-    // EUR
-    elEur.textContent = 'R$ ' + data.eur.valor.toFixed(2);
-    const sinalEur = data.eur.variacao >= 0 ? '▲' : '▼';
-    elVarEur.textContent = sinalEur + ' ' + Math.abs(data.eur.variacao).toFixed(2) + '%';
-
-  } catch (err) {
-    console.error('[Cotação] Erro:', err);
-    elUsd.textContent = 'indisponível';
-    elEur.textContent = 'indisponível';
-    elVarUsd.textContent = '';
-    elVarEur.textContent = '';
-    cardUsd.classList.add('erro');
-    cardEur.classList.add('erro');
-  }
-}
-
-// Carrega ao abrir + a cada 15 min (backend tem cache de 10 min)
-carregarCotacao();
-setInterval(carregarCotacao, 15 * 60 * 1000);
-
-// Botão de recarregar manual
-document.getElementById('btn-recarregar-cotacao')
-  ?.addEventListener('click', carregarCotacao);

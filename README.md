@@ -22,7 +22,6 @@ indicadores financeiros em um dashboard com gráficos e filtros por período.
 - **Back-end:** Node.js + Express
 - **Banco de dados:** PostgreSQL hospedado no **Neon** (DBaaS), acessado via driver `pg`
 - **Front-end:** HTML, CSS e JavaScript (vanilla) + Chart.js para os gráficos
-- **API externa:** AwesomeAPI (cotação de moedas)
 - **Testes:** Jest + Supertest
 - **CI:** GitHub Actions
 - **Deploy:** Render
@@ -40,17 +39,6 @@ Tabelas: `produtos`, `vendas`, `saidas`, `compras`, `compra_itens`,
 Operações de venda e compra rodam dentro de transações
 (`BEGIN/COMMIT/ROLLBACK`), garantindo que estoque, movimentos e contas a pagar
 fiquem sempre consistentes.
-
-## 🌐 Integração com API externa
-
-A aplicação consome a [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas)
-para exibir as cotações de **USD→BRL** e **EUR→BRL** em tempo real no Dashboard,
-ajudando o revendedor a precificar produtos importados sem sair do sistema.
-
-- **Endpoint interno:** `GET /api/cotacao`
-- **Fonte:** `https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL`
-- **Resiliência:** cache em memória de 10 minutos, fallback para o último valor
-  válido (`stale`) e tratamento explícito de limite de requisições (HTTP 429).
 
 ## ▶️ Como rodar localmente
 
@@ -84,7 +72,6 @@ automaticamente no primeiro acesso.
 npm test
 ```
 
-- Testes de integração da cotação (`/api/cotacao`) com mock da API externa.
 - Teste de integração com o banco real (`produtos.db.test.js`), que roda quando
   `DATABASE_URL` está definida (no CI vem de um *secret*).
 
@@ -99,7 +86,6 @@ npm test
 | GET/POST/DELETE | `/api/saidas` | Despesas avulsas |
 | GET | `/api/estoque/movimentos` | Histórico de movimentação |
 | GET | `/api/dashboard` | Indicadores e gráficos |
-| GET | `/api/cotacao` | Cotação de moedas (AwesomeAPI) |
 
 ---
 
