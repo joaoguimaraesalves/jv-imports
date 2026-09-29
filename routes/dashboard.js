@@ -38,7 +38,8 @@ module.exports = (pool) => {
       wVendas.params
     )).rows[0];
 
-    // Contas a pagar efetivamente pagas entram como despesa do período.
+    // Contas pagas no período: só informação de caixa. A mercadoria comprada
+    // já entra no lucro pelo custo de cada venda, então não é descontada de novo.
     const rc = (await pool.query(
       `SELECT COALESCE(SUM(valor),0) as total_pago
        FROM contas_pagar
@@ -47,7 +48,7 @@ module.exports = (pool) => {
       wContas.params
     )).rows[0];
 
-    const lucroLiquido = rv.vendas - rv.custos - rc.total_pago;
+    const lucroLiquido = rv.vendas - rv.custos;
 
     res.json({
       total_vendas: rv.vendas,

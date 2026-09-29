@@ -51,6 +51,38 @@ function coresTema() {
     };
 }
 
+// Lista todos os períodos (dias ou meses) do filtro atual, inclusive os sem
+// movimento, para o eixo X mostrar a linha do tempo completa com zeros.
+function periodosDoFiltro(periodo, agrupar, chavesComDados) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let inicio = new Date(hoje);
+    if (periodo === '7d')  inicio.setDate(hoje.getDate() - 6);
+    if (periodo === '30d') inicio.setDate(hoje.getDate() - 29);
+    if (periodo === 'mes') inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    if (periodo === 'ano') inicio = new Date(hoje.getFullYear(), 0, 1);
+    if (periodo === 'total' && chavesComDados.length) {
+        const [ano, mes, dia] = [...chavesComDados].sort()[0].split('-').map(Number);
+        inicio = new Date(ano, mes - 1, dia || 1);
+    }
+
+    const chaves = new Set(chavesComDados);
+    const cursor = new Date(inicio);
+    if (agrupar === 'mes') {
+        cursor.setDate(1);
+        while (cursor <= hoje) {
+            chaves.add(dataLocalISO(cursor).slice(0, 7));
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+    } else {
+        while (cursor <= hoje) {
+            chaves.add(dataLocalISO(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+    }
+    return [...chaves].sort();
+}
+
 async function desenharGrafico() {
     const { vendas, contas } = await fetchJSON(
         `/api/dashboard/grafico?periodo=${estadoDashboard.periodo}&agrupar=${estadoDashboard.agrupar}`
@@ -63,9 +95,10 @@ async function desenharGrafico() {
     vendas.forEach(v => { garantir(v.periodo); porPeriodo[v.periodo].faturamento += v.faturamento; porPeriodo[v.periodo].custo += v.custo; });
     contas.forEach(c => { garantir(c.periodo); porPeriodo[c.periodo].gastos += c.pagas; });
 
-    const periodos     = Object.keys(porPeriodo).sort();
+    const periodos     = periodosDoFiltro(estadoDashboard.periodo, estadoDashboard.agrupar, Object.keys(porPeriodo));
+    periodos.forEach(garantir);
     const faturamentos = periodos.map(p => porPeriodo[p].faturamento);
-    const lucros       = periodos.map(p => porPeriodo[p].faturamento - porPeriodo[p].custo - porPeriodo[p].gastos);
+    const lucros       = periodos.map(p => porPeriodo[p].faturamento - porPeriodo[p].custo);
     const gastos       = periodos.map(p => porPeriodo[p].gastos);
 
     // Formata rótulos do eixo X conforme o agrupamento (dia ou mês)
@@ -88,9 +121,9 @@ async function desenharGrafico() {
         data: {
             labels,
             datasets: [
-                { label: 'Faturamento',   data: faturamentos, backgroundColor: '#3B82F6', borderRadius: 4 },
-                { label: 'Lucro Líquido', data: lucros,       backgroundColor: '#10B981', borderRadius: 4 },
-                { label: 'Contas pagas',  data: gastos,       backgroundColor: '#EF4444', borderRadius: 4 }
+                { label: 'Faturamento',   data: faturamentos, backgroundColor: '#3B82F6', borderRadius: 4, maxBarThickness: 36 },
+                { label: 'Lucro Líquido', data: lucros,       backgroundColor: '#10B981', borderRadius: 4, maxBarThickness: 36 },
+                { label: 'Contas pagas',  data: gastos,       backgroundColor: '#EF4444', borderRadius: 4, maxBarThickness: 36 }
             ]
         },
         options: {
@@ -107,7 +140,7 @@ async function desenharGrafico() {
             },
             scales: {
                 x: {
-                    ticks: { color: cores.suave },
+                    ticks: { color: cores.suave, maxRotation: 0, autoSkipPadding: 12 },
                     grid:  { color: cores.grid }
                 },
                 y: {
@@ -234,7 +267,11 @@ async function carregarMetaCaixa() {
 
     document.getElementById('caixa-saldo').innerText    = formatarMoeda(d.saldo_estimado);
     document.getElementById('caixa-pendente').innerText = formatarMoeda(plano.totalPendente);
-    document.getElementById('caixa-falta').innerText    = formatarMoeda(plano.faltaTotal);
+    // Com as contas cobertas, o que sobra no saldo é lucro livre para retirar
+    const faltando = plano.faltaTotal > 0;
+    document.getElementById('caixa-falta-label').innerText = faltando ? 'Falta arrecadar' : 'Sobra (lucro livre)';
+    document.getElementById('caixa-falta').innerText = formatarMoeda(faltando ? plano.faltaTotal : plano.sobra);
+    document.getElementById('caixa-falta').style.color = faltando ? 'var(--color-red)' : 'var(--color-green)';
 
     const p = plano.proxima;
     if (plano.itens.length === 0) {
