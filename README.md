@@ -40,6 +40,22 @@ Operações de venda e compra rodam dentro de transações
 (`BEGIN/COMMIT/ROLLBACK`), garantindo que estoque, movimentos e contas a pagar
 fiquem sempre consistentes.
 
+## 📜 Histórico da Loja
+
+Tela para registrar tudo o que já foi comprado e vendido antes de usar o
+sistema e ver os números da loja desde o início.
+
+1. **Compras antigas**: em *Compras → Nova Compra*, tipo **"Compra antiga
+   (histórico)"** com a data real do pedido. Entram no estoque, mas não geram
+   conta a pagar nem mexem no saldo.
+2. **Acertar estoque**: informa-se o estoque real de hoje; a diferença para o
+   sistema vira **venda antiga** (com data de corte), que baixa o estoque e entra
+   no lucro total, sem mexer no saldo atual.
+3. **Saldo atual da conta**: o valor que está no banco hoje.
+4. **Calcular histórico**: grava um retrato dos totais (lucro total, faturamento,
+   investido, estoque parado, saldo e o retirado/usado fora da loja estimado)
+   na tabela `historico_calculos`. Cada cálculo fica salvo para auditoria.
+
 ## ▶️ Como rodar localmente
 
 Pré-requisitos: Node.js 18+ e uma string de conexão de um banco PostgreSQL
@@ -83,6 +99,8 @@ npm test
 | GET/POST/PUT/DELETE | `/api/produtos` | CRUD de produtos |
 | GET/POST/DELETE | `/api/vendas` | Vendas (baixa estoque em transação) |
 | PATCH | `/api/vendas/:id/receber` | Marca venda fiado como recebida |
+| GET / POST | `/api/historico`, `/api/historico/calcular` | Histórico da Loja: totais de longo prazo e cálculos salvos |
+| POST | `/api/historico/vendas-antigas` | Registra vendas feitas antes do sistema (acerto de estoque) |
 | GET/POST/DELETE | `/api/compras` | Compras com itens e parcelamento |
 | GET/POST/PATCH/DELETE | `/api/contas-pagar` | Contas a pagar |
 | GET | `/api/estoque/movimentos` | Histórico de movimentação |

@@ -77,6 +77,18 @@ async function initDb(pool) {
     ALTER TABLE vendas ADD COLUMN IF NOT EXISTS cliente TEXT;
     ALTER TABLE vendas ADD COLUMN IF NOT EXISTS receber_ate TEXT;
     ALTER TABLE vendas ADD COLUMN IF NOT EXISTS data_recebimento TEXT;
+
+    -- Histórico da loja: compras/vendas antigas (antes de usar o sistema).
+    -- Não mexem no saldo atual: esse dinheiro já entrou/saiu há tempo.
+    ALTER TABLE compras ADD COLUMN IF NOT EXISTS historico BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE vendas  ADD COLUMN IF NOT EXISTS historico BOOLEAN NOT NULL DEFAULT false;
+
+    -- Cada clique em "Calcular histórico" grava um retrato dos totais (auditoria)
+    CREATE TABLE IF NOT EXISTS historico_calculos (
+      id SERIAL PRIMARY KEY,
+      data TEXT NOT NULL,
+      dados JSONB NOT NULL
+    );
   `);
 
   console.log('Banco de dados da JV Imports (Postgres/Neon) conectado!');

@@ -256,6 +256,7 @@ async function carregarMetaCaixa() {
     const ajustes = [];
     if (d.vendas_desde)       ajustes.push(`+ ${formatarMoeda(d.vendas_desde)} em vendas`);
     if (d.contas_pagas_desde) ajustes.push(`− ${formatarMoeda(d.contas_pagas_desde)} em contas pagas`);
+    if (d.compras_vista_desde) ajustes.push(`− ${formatarMoeda(d.compras_vista_desde)} em compras à vista`);
     info.innerHTML = `Saldo informado: ${formatarMoeda(d.saldo_informado)} em ${quando}`
         + (ajustes.length ? ` · desde então: ${ajustes.join(', ')}` : '');
 

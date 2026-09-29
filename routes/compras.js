@@ -25,6 +25,11 @@ module.exports = (pool) => {
     if (!Array.isArray(itens) || itens.length === 0) {
       return 'A compra precisa ter ao menos 1 item';
     }
+    if (body.historico) {
+      // Compra antiga: precisa da data real (AAAA-MM-DD) e ela tem que estar no passado
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(body.data || '')) return 'Informe a data da compra antiga';
+      if (body.data > new Date().toISOString().slice(0, 10)) return 'A data da compra antiga não pode ser no futuro';
+    }
     for (const it of itens) {
       if (!it.produto_id && !it.produto_nome) return 'Cada item precisa de produto_id ou produto_nome';
       if (!it.quantidade || it.quantidade <= 0) return 'Quantidade deve ser maior que zero';
@@ -48,7 +53,9 @@ module.exports = (pool) => {
   });
 
   // Criar compra: insere cabeçalho, cria/atualiza produtos, registra itens e
-  // movimentos, e gera contas a pagar se for cartão parcelado. Tudo em transação.
+  // movimentos, e gera contas a pagar se for no cartão. Tudo em transação.
+  // Compra histórica (historico: true): usa a data informada e não gera contas
+  // a pagar nem mexe no saldo — o dinheiro já saiu há tempo.
   router.post('/', async (req, res) => {
     const erro = validarPayload(req.body);
     if (erro) return res.status(400).json({ error: erro });
@@ -57,7 +64,8 @@ module.exports = (pool) => {
     const forma_pagamento = req.body.forma_pagamento;
     const parcelas = parseInt(req.body.parcelas) || 1;
     const itens = req.body.itens;
-    const dataISO = new Date().toISOString();
+    const historico = req.body.historico === true;
+    const dataISO = historico ? `${req.body.data}T12:00:00.000Z` : new Date().toISOString();
 
     const client = await pool.connect();
     try {
@@ -69,9 +77,9 @@ module.exports = (pool) => {
       );
 
       const insCompra = await client.query(
-        `INSERT INTO compras (descricao, valor_total, forma_pagamento, parcelas, data)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [descricao || null, valor_total, forma_pagamento, parcelas, dataISO]
+        `INSERT INTO compras (descricao, valor_total, forma_pagamento, parcelas, data, historico)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [descricao || null, valor_total, forma_pagamento, parcelas, dataISO, historico]
       );
       const compraId = insCompra.rows[0].id;
 
@@ -83,8 +91,11 @@ module.exports = (pool) => {
           const prod = await client.query('SELECT * FROM produtos WHERE id = $1', [produtoId]);
           if (!prod.rows[0]) throw new Error(`Produto #${produtoId} não encontrado`);
           produtoNome = prod.rows[0].nome;
+          // Compra antiga não sobrescreve o custo atual (só preenche se estiver zerado)
           await client.query(
-            'UPDATE produtos SET custo = $1, quantidade = quantidade + $2 WHERE id = $3',
+            historico
+              ? 'UPDATE produtos SET custo = CASE WHEN custo = 0 THEN $1 ELSE custo END, quantidade = quantidade + $2 WHERE id = $3'
+              : 'UPDATE produtos SET custo = $1, quantidade = quantidade + $2 WHERE id = $3',
             [item.custo_unitario, item.quantidade, produtoId]
           );
         } else {
@@ -107,11 +118,12 @@ module.exports = (pool) => {
            (produto_id, tipo, quantidade, custo_unitario, origem_tipo, origem_id, observacao, data)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [produtoId, 'entrada', item.quantidade, item.custo_unitario, 'compra',
-           compraId, `Compra #${compraId}`, dataISO]
+           compraId, `${historico ? 'Compra antiga' : 'Compra'} #${compraId}`, dataISO]
         );
       }
 
-      if (forma_pagamento === 'cartao' && parcelas > 1) {
+      // Cartão (inclusive 1x) vira conta(s) a pagar na fatura
+      if (!historico && forma_pagamento === 'cartao' && parcelas >= 1) {
         const valorParcela = Math.floor((valor_total / parcelas) * 100) / 100;
         const soma = valorParcela * (parcelas - 1);
         const valorUltima = Math.round((valor_total - soma) * 100) / 100;

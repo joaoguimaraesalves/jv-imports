@@ -95,7 +95,9 @@ async function carregarVendas() {
         const forma = `<span style="text-transform: capitalize;">${v.forma_pagamento || '—'}</span>`;
         let pagamento, acaoReceber = '';
 
-        if (!v.recebido) {
+        if (v.historico) {
+            pagamento = `<span class="badge badge-ajuste">Venda antiga</span>`;
+        } else if (!v.recebido) {
             const atrasado = v.receber_ate && v.receber_ate < hoje;
             const ate = v.receber_ate ? ` até ${new Date(v.receber_ate + 'T00:00:00').toLocaleDateString('pt-BR')}` : '';
             pagamento = `<span class="badge ${atrasado ? 'badge-vencida' : 'badge-pendente'}">${atrasado ? 'Atrasado' : 'A receber'}${ate}</span>

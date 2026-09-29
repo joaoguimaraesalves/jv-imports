@@ -26,6 +26,7 @@
             <li id="menu-compras"      onclick="mudarTela('compras')">📥 Compras / Entradas</li>
             <li id="menu-contas-pagar" onclick="mudarTela('contas-pagar')">💳 Contas a Pagar</li>
             <li id="menu-movimentos"   onclick="mudarTela('movimentos')">🔄 Movimentos</li>
+            <li id="menu-historico"    onclick="mudarTela('historico')">📜 Histórico da Loja</li>
         </ul>
         <div class="sidebar-footer">
             <button id="btn-tema" class="btn-tema" onclick="alternarTema()">
@@ -211,6 +212,74 @@
             </table>
         </div>
 
+        <!-- Histórico da Loja -->
+        <div id="tela-historico" class="tela">
+            <div class="header">
+                <h2>📜 Histórico da Loja</h2>
+                <button class="btn-green" onclick="calcularHistorico()">🧮 Calcular histórico</button>
+            </div>
+            <div id="hist-ultimo-info" class="caixa-saldo-info"></div>
+            <div id="hist-aviso" class="caixa-destaque" style="margin-bottom: 15px;"></div>
+
+            <div class="cards-grid">
+                <div class="card bg-green"><div class="card-header"><span>Lucro total da loja</span></div><div class="card-value" id="hist-lucro">--</div></div>
+                <div class="card bg-blue"><div class="card-header"><span>Faturamento total</span></div><div class="card-value" id="hist-faturamento">--</div></div>
+                <div class="card bg-purple"><div class="card-header"><span>Investido em mercadoria</span></div><div class="card-value" id="hist-investido">--</div></div>
+                <div class="card bg-orange"><div class="card-header"><span>Estoque parado (a custo)</span></div><div class="card-value" id="hist-estoque">--</div></div>
+                <div class="card bg-blue"><div class="card-header"><span>Saldo na conta</span></div><div class="card-value" id="hist-saldo">--</div></div>
+                <div class="card bg-red"><div class="card-header"><span>Retirado / usado fora (est.)</span></div><div class="card-value" id="hist-retirado">--</div></div>
+            </div>
+            <div id="hist-detalhe" class="hist-detalhe"></div>
+
+            <div class="chart-container">
+                <div class="chart-header"><h3>🧭 Como montar o histórico</h3></div>
+                <ol class="hist-passos">
+                    <li>Cadastre as compras antigas (ex.: pedidos do AliExpress) em <a href="#" onclick="mudarTela('compras'); abrirModalCompra(); return false;">Compras → Nova Compra</a>, com o tipo <strong>"Compra antiga (histórico)"</strong> e a data do pedido. Elas entram no estoque, mas não geram conta a pagar nem mexem no saldo.</li>
+                    <li>Aqui embaixo, em <strong>Acertar estoque</strong>, digite quanto de cada produto você tem <strong>hoje</strong>. A diferença vira "venda antiga".</li>
+                    <li>Confirme o <strong>saldo atual da conta</strong>: o dinheiro das vendas antigas já foi gasto ou reinvestido, então vale o que está no banco hoje.</li>
+                    <li>Clique em <strong>🧮 Calcular histórico</strong>. O resultado fica salvo com data e hora.</li>
+                </ol>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>📦 Acertar estoque — vendas antigas</h3>
+                    <div class="saldo-form">
+                        <label for="hist-data-corte">Vendas feitas até</label>
+                        <input type="date" id="hist-data-corte">
+                    </div>
+                </div>
+                <p class="caixa-saldo-info">Deixe em branco os produtos que já estão certos. O valor recebido vem sugerido pelo preço de venda × quantidade; ajuste se vendeu mais barato.</p>
+                <table class="hist-tabela">
+                    <thead><tr><th>Produto</th><th>No sistema</th><th>Estoque real hoje</th><th>Vendidas antes</th><th>Valor recebido (R$)</th><th>Lucro</th></tr></thead>
+                    <tbody id="hist-acerto-lista"></tbody>
+                </table>
+                <div class="hist-acerto-rodape">
+                    <span id="hist-acerto-total">Nenhuma venda antiga informada.</span>
+                    <button class="btn-blue" id="btn-vendas-antigas" onclick="registrarVendasAntigas()" disabled>Registrar vendas antigas</button>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>💰 Saldo atual da conta</h3>
+                    <form class="saldo-form" onsubmit="salvarSaldoHistorico(event)">
+                        <label for="hist-saldo-input">Quanto tem na conta hoje</label>
+                        <input type="number" id="hist-saldo-input" step="0.01" required>
+                        <button type="submit" class="btn-green">Salvar</button>
+                    </form>
+                </div>
+                <div id="hist-saldo-info" class="caixa-saldo-info" style="margin-bottom: 0;"></div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header"><h3>🗂️ Cálculos salvos</h3></div>
+                <table class="hist-tabela">
+                    <thead><tr><th>Calculado em</th><th>Lucro total</th><th>Faturamento</th><th>Investido</th><th>Estoque</th><th>Saldo</th><th>Retirado (est.)</th></tr></thead>
+                    <tbody id="hist-calculos-lista"></tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <!-- Modal: Venda -->
@@ -283,6 +352,23 @@
             <form onsubmit="salvarCompra(event)">
                 <h3>Nova Compra / Entrada de Mercadoria</h3>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="compra-tipo" onchange="mudarTipoCompra()">
+                            <option value="atual">Compra atual</option>
+                            <option value="historico">Compra antiga (histórico)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="grupo-compra-data" style="display: none;">
+                        <label>Data da compra</label>
+                        <input type="date" id="compra-data">
+                    </div>
+                </div>
+                <small id="compra-tipo-info" class="compra-tipo-info" style="display: none;">
+                    Compra antiga entra no estoque e no histórico, mas não gera conta a pagar nem mexe no saldo.
+                </small>
+
                 <div class="form-group">
                     <label>Descrição (ex: "Importação de abril")</label>
                     <input type="text" id="compra-desc" placeholder="Opcional">
@@ -346,12 +432,14 @@
     <!-- Ordem importa: utils → módulos → app -->
     <script src="/js/utils.js"></script>
     <script src="/js/planejamento.js"></script>
+    <script src="/js/historico-calc.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/produtos.js"></script>
     <script src="/js/vendas.js"></script>
     <script src="/js/compras.js"></script>
     <script src="/js/contas-pagar.js"></script>
     <script src="/js/movimentos.js"></script>
+    <script src="/js/historico.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/tema.js"></script>
 </body>
