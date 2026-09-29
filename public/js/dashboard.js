@@ -12,7 +12,8 @@ async function atualizarDashboardCompleto() {
         carregarDashboard(),
         desenharGrafico(),
         carregarTopProdutos(),
-        carregarProximasContas()
+        carregarProximasContas(),
+        carregarMetaCaixa()
     ]);
 }
 
@@ -174,4 +175,110 @@ async function carregarProximasContas() {
                 <span class="proxima-conta-valor">${formatarMoeda(c.valor)}</span>
             </div>`;
     });
+}
+
+// ---------- Meta de Caixa ----------
+function dataLocalISO(d = new Date()) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+const formatarDataBR = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR');
+
+function textoPrazo(item) {
+    if (item.vencida)    return `venceu há ${-item.dias} dia(s)`;
+    if (item.dias === 0) return 'vence hoje';
+    if (item.dias === 1) return 'vence amanhã';
+    return `faltam ${item.dias} dias`;
+}
+
+const SITUACOES = {
+    'coberta':  { texto: '✅ Coberta',          classe: 'badge-paga' },
+    'no-ritmo': { texto: '🟢 No ritmo',         classe: 'badge-paga' },
+    'abaixo':   { texto: '🔴 Abaixo do ritmo',  classe: 'badge-vencida' },
+    'vencida':  { texto: '⚠️ Vencida',          classe: 'badge-vencida' }
+};
+
+async function carregarMetaCaixa() {
+    const d = await fetchJSON('/api/caixa');
+    const info = document.getElementById('caixa-saldo-info');
+    const destaque = document.getElementById('caixa-destaque');
+    const tbody = document.getElementById('caixa-lista');
+    const tabela = tbody.closest('table');
+
+    document.getElementById('caixa-media').innerText = formatarMoeda(d.media_diaria_vendas);
+
+    if (d.saldo_informado === null) {
+        info.innerHTML = 'Informe o saldo atual da conta de vendas para calcular quanto falta para pagar as contas.';
+        ['caixa-saldo', 'caixa-pendente', 'caixa-falta'].forEach(id => document.getElementById(id).innerText = '--');
+        destaque.innerHTML = '';
+        tabela.style.display = 'none';
+        return;
+    }
+
+    const input = document.getElementById('caixa-saldo-input');
+    if (document.activeElement !== input) input.value = d.saldo_estimado.toFixed(2);
+
+    const quando = new Date(d.saldo_atualizado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const ajustes = [];
+    if (d.vendas_desde)       ajustes.push(`+ ${formatarMoeda(d.vendas_desde)} em vendas`);
+    if (d.saidas_desde)       ajustes.push(`− ${formatarMoeda(d.saidas_desde)} em despesas`);
+    if (d.contas_pagas_desde) ajustes.push(`− ${formatarMoeda(d.contas_pagas_desde)} em contas pagas`);
+    info.innerHTML = `Saldo informado: ${formatarMoeda(d.saldo_informado)} em ${quando}`
+        + (ajustes.length ? ` · desde então: ${ajustes.join(', ')}` : '');
+
+    const plano = calcularPlanejamento({
+        saldo: d.saldo_estimado,
+        contas: d.contas_pendentes,
+        mediaDiaria: d.media_diaria_vendas,
+        hoje: dataLocalISO()
+    });
+
+    document.getElementById('caixa-saldo').innerText    = formatarMoeda(d.saldo_estimado);
+    document.getElementById('caixa-pendente').innerText = formatarMoeda(plano.totalPendente);
+    document.getElementById('caixa-falta').innerText    = formatarMoeda(plano.faltaTotal);
+
+    const p = plano.proxima;
+    if (plano.itens.length === 0) {
+        destaque.className = 'caixa-destaque ok';
+        destaque.innerHTML = 'Nenhuma conta pendente 🎉';
+    } else if (!p) {
+        destaque.className = 'caixa-destaque ok';
+        destaque.innerHTML = `✅ O saldo cobre todas as contas pendentes. Sobram <strong>${formatarMoeda(plano.sobra)}</strong>.`;
+    } else {
+        const prazo = p.vencida || p.dias === 0
+            ? 'esse valor <strong>hoje</strong>'
+            : `cerca de <strong>${formatarMoeda(p.porDia)}/dia</strong> até <strong>${formatarDataBR(p.vencimento)}</strong>`;
+        const ritmo = p.diasNoRitmo === null
+            ? 'Sem vendas nos últimos 30 dias para estimar o ritmo.'
+            : `No ritmo atual (${formatarMoeda(d.media_diaria_vendas)}/dia) você junta esse valor em ~${p.diasNoRitmo} dia(s)`
+              + (p.status === 'no-ritmo' ? ' ✅ dá tempo.' : ' ⚠️ acima do prazo.');
+        destaque.className = 'caixa-destaque ' + (p.status === 'no-ritmo' ? 'ok' : 'alerta');
+        destaque.innerHTML = `Faltam <strong>${formatarMoeda(p.falta)}</strong> para pagar
+            <strong>${p.descricao}</strong> (${formatarMoeda(p.valor)}, ${textoPrazo(p)}).
+            Você precisa vender ${prazo}.<br><small>${ritmo}</small>`;
+    }
+
+    tabela.style.display = plano.itens.length ? '' : 'none';
+    tbody.innerHTML = plano.itens.slice(0, 8).map(i => {
+        const s = SITUACOES[i.status];
+        return `
+            <tr>
+                <td>${i.descricao}</td>
+                <td>${formatarDataBR(i.vencimento)} <small class="caixa-prazo">${textoPrazo(i)}</small></td>
+                <td>${formatarMoeda(i.valor)}</td>
+                <td>${i.falta > 0 ? formatarMoeda(i.falta) : '—'}</td>
+                <td>${i.falta > 0 ? formatarMoeda(i.porDia) : '—'}</td>
+                <td><span class="badge ${s.classe}">${s.texto}</span></td>
+            </tr>`;
+    }).join('');
+}
+
+async function salvarSaldo(e) {
+    e.preventDefault();
+    const saldo = parseFloat(document.getElementById('caixa-saldo-input').value);
+    if (!Number.isFinite(saldo)) return;
+    await fetchJSON('/api/caixa/saldo', { method: 'PUT', body: JSON.stringify({ saldo }) });
+    document.getElementById('caixa-saldo-input').blur();
+    carregarMetaCaixa();
 }

@@ -273,6 +273,54 @@ select {
     width: 100%;
 }
 
+/* ===== Meta de Caixa (saldo x contas a pagar) ===== */
+.saldo-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.saldo-form label { color: var(--text-muted); font-size: 0.85rem; }
+.saldo-form input {
+    width: 140px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    outline: none;
+}
+.saldo-form input:focus { border-color: var(--color-green); }
+.saldo-form .btn-green { padding: 8px 16px; }
+.caixa-saldo-info { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px; }
+.caixa-resumo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
+}
+.caixa-resumo > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background-color: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+.caixa-resumo span { color: var(--text-muted); font-size: 0.8rem; }
+.caixa-resumo strong { font-size: 1.2rem; }
+.caixa-destaque:empty { display: none; }
+.caixa-destaque {
+    padding: 12px 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-orange);
+    background: rgba(245, 158, 11, 0.12);
+    line-height: 1.5;
+}
+.caixa-destaque.ok { border-left-color: var(--color-green); background: rgba(16, 185, 129, 0.12); }
+.caixa-destaque.alerta { border-left-color: var(--color-red); background: rgba(239, 68, 68, 0.12); }
+.caixa-destaque small { color: var(--text-muted); }
+.caixa-tabela { margin-top: 15px; }
+.caixa-tabela th, .caixa-tabela td { padding: 10px 15px; }
+.caixa-prazo { display: block; color: var(--text-muted); font-size: 0.75rem; }
+
 /* ===== Tema claro/escuro: botão de alternância ===== */
 .sidebar-footer {
     margin-top: auto;
