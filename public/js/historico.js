@@ -103,7 +103,7 @@ async function calcularHistorico() {
 function renderAcerto() {
     const tbody = document.getElementById('hist-acerto-lista');
     if (!produtosHistorico.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum produto com estoque no sistema. Cadastre as compras antigas primeiro.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhum produto com estoque no sistema. Cadastre as compras antigas primeiro.</td></tr>`;
         atualizarAcerto();
         return;
     }
@@ -114,8 +114,10 @@ function renderAcerto() {
             <td><input type="number" min="0" step="1" class="input-tabela" placeholder="${p.quantidade}"
                        oninput="mudarAcerto(${p.id}, 'real', this.value)"></td>
             <td id="hist-vend-${p.id}">—</td>
-            <td><input type="number" min="0" step="0.01" class="input-tabela" id="hist-valor-${p.id}"
-                       oninput="mudarAcerto(${p.id}, 'valor', this.value)" disabled></td>
+            <td><input type="number" min="0" step="0.01" class="input-tabela" id="hist-preco-${p.id}"
+                       value="${p.preco > 0 ? Number(p.preco).toFixed(2) : ''}" placeholder="sem preço"
+                       oninput="mudarAcerto(${p.id}, 'preco', this.value)"></td>
+            <td id="hist-total-${p.id}">—</td>
             <td id="hist-lucro-${p.id}">—</td>
         </tr>`).join('');
     atualizarAcerto();
@@ -131,25 +133,28 @@ function atualizarAcerto() {
     r.linhas.forEach(l => {
         const vend = document.getElementById(`hist-vend-${l.produto_id}`);
         if (!vend) return;
-        const valor = document.getElementById(`hist-valor-${l.produto_id}`);
+        const preco = document.getElementById(`hist-preco-${l.produto_id}`);
+        const total = document.getElementById(`hist-total-${l.produto_id}`);
         const lucro = document.getElementById(`hist-lucro-${l.produto_id}`);
         vend.innerHTML = l.sobra > 0
             ? `<span style="color: var(--color-orange);">+${l.sobra} a mais que o sistema</span>`
             : l.vendidas > 0 ? `<strong>${l.vendidas} un</strong>` : '—';
-        valor.disabled = l.vendidas === 0;
-        valor.placeholder = l.semValor ? 'informe' : l.vendidas > 0 ? l.sugerido.toFixed(2) : '';
-        valor.classList.toggle('input-alerta', l.semValor);
+        preco.classList.toggle('input-alerta', l.semValor);
+        total.innerText = l.vendidas > 0 && !l.semValor ? formatarMoeda(l.valor) : '—';
         lucro.innerText = l.vendidas > 0 && !l.semValor ? formatarMoeda(l.lucro) : '—';
         lucro.style.color = l.lucro < 0 ? 'var(--color-red)' : 'var(--color-green)';
     });
 
     const t = r.totais;
-    document.getElementById('hist-acerto-total').innerHTML = t.unidades > 0
-        ? `<strong>${t.unidades} un</strong> vendidas antes · recebido ${formatarMoeda(t.valor)} · lucro <strong>${formatarMoeda(t.lucro)}</strong>`
-        : 'Nenhuma venda antiga informada.';
-    if (t.semValor > 0) {
-        document.getElementById('hist-acerto-total').innerHTML +=
-            `<br><span style="color: var(--color-orange);">⚠️ Informe o valor recebido de ${t.semValor} produto(s) sem preço de venda cadastrado.</span>`;
+    const totalEl = document.getElementById('hist-acerto-total');
+    if (t.unidades === 0) {
+        totalEl.innerHTML = 'Nenhuma venda antiga informada.';
+    } else if (t.semValor > 0) {
+        // Enquanto faltar preço, os totais ficariam errados: mostra só o aviso
+        totalEl.innerHTML = `<strong>${t.unidades} un</strong> vendidas antes<br>` +
+            `<span style="color: var(--color-orange);">⚠️ ${t.semValor} produto(s) sem preço de venda. Informe o preço aqui ou em Estoque da Loja → Editar.</span>`;
+    } else {
+        totalEl.innerHTML = `<strong>${t.unidades} un</strong> vendidas antes · recebido ${formatarMoeda(t.valor)} · lucro <strong>${formatarMoeda(t.lucro)}</strong>`;
     }
     document.getElementById('btn-vendas-antigas').disabled = t.unidades === 0 || t.semValor > 0;
 }
@@ -163,7 +168,8 @@ async function registrarVendasAntigas() {
     const dataBR = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
     if (!confirm(`Registrar ${r.totais.unidades} unidade(s) vendida(s) até ${dataBR}, ` +
                  `recebendo ${formatarMoeda(r.totais.valor)} (lucro ${formatarMoeda(r.totais.lucro)})?\n\n` +
-                 'O estoque será baixado e as vendas vão para o histórico, sem mexer no saldo atual.')) return;
+                 'O estoque será baixado e as vendas vão para o histórico, sem mexer no saldo atual. ' +
+                 'Produtos sem preço de venda cadastrado passam a usar o preço informado aqui.')) return;
 
     try {
         await fetchJSON('/api/historico/vendas-antigas', {

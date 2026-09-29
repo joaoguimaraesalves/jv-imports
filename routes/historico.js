@@ -74,7 +74,14 @@ module.exports = (pool) => {
           [prod.id, prod.nome, qtd, valor, custo, dataISO]
         )).rows[0];
 
-        await client.query('UPDATE produtos SET quantidade = quantidade - $1 WHERE id = $2', [qtd, prod.id]);
+        // Produto ainda sem preço de venda: guarda o preço usado aqui no cadastro
+        const preco = parseFloat(it.preco);
+        await client.query(
+          `UPDATE produtos SET quantidade = quantidade - $1,
+                  preco = CASE WHEN preco = 0 AND $3::numeric > 0 THEN $3::numeric ELSE preco END
+           WHERE id = $2`,
+          [qtd, prod.id, Number.isFinite(preco) ? preco : 0]
+        );
         await client.query(
           `INSERT INTO estoque_movimentos
            (produto_id, tipo, quantidade, custo_unitario, origem_tipo, origem_id, observacao, data)
