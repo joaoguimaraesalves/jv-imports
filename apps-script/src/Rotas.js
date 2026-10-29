@@ -42,6 +42,11 @@ const ROTAS = [
   ['GET', /^dashboard\/grafico$/, dashboardGrafico_],
   ['GET', /^dashboard\/top-produtos$/, dashboardTopProdutos_],
   ['GET', /^dashboard\/proximas-contas$/, dashboardProximasContas_],
+  ['GET', /^dashboard\/canais$/, dashboardCanais_],
+  ['GET', /^dashboard\/meta$/, dashboardMeta_],
+  ['PUT', /^dashboard\/meta$/, dashboardMetaSalvar_],
+  ['GET', /^config\/vendas$/, configVendasLer_],
+  ['PUT', /^config\/vendas$/, configVendasSalvar_],
 
   ['GET', /^produtos$/, produtosListar_],
   ['POST', /^produtos$/, produtosCriar_],
@@ -99,6 +104,42 @@ function intervaloPeriodo_(periodo) {
   return null;
 }
 
+/**
+ * Período anterior do mesmo tamanho, para comparar ("vs período anterior").
+ * Mês e ano comparam até o mesmo ponto: 1–29/10 contra 1–29/09.
+ */
+function intervaloAnterior_(periodo) {
+  const agora = new Date();
+  const inicio = intervaloPeriodo_(periodo);
+  if (!inicio) return null;
+  const ini = new Date(inicio);
+  if (periodo === 'mes') {
+    const a = new Date(ini.getFullYear(), ini.getMonth() - 1, 1);
+    return { inicio: a.toISOString(), fim: new Date(a.getTime() + (agora - ini)).toISOString() };
+  }
+  if (periodo === 'ano') {
+    const a = new Date(ini.getFullYear() - 1, 0, 1);
+    return { inicio: a.toISOString(), fim: new Date(a.getTime() + (agora - ini)).toISOString() };
+  }
+  const dias = periodo === 'hoje' ? 1 : periodo === '7d' ? 7 : 30;
+  const a = new Date(ini);
+  a.setDate(a.getDate() - dias);
+  return { inicio: a.toISOString(), fim: ini.toISOString() };
+}
+
+function resumoVendas_(vendas) {
+  const total = soma_(vendas, 'valor');
+  const custos = soma_(vendas, 'custo');
+  const despesas = vendas.reduce(function (s, v) { return s + despesasVenda_(v); }, 0);
+  const qtd = soma_(vendas, 'quantidade');
+  const lucro = total - custos - despesas;
+  return {
+    total_vendas: total, custos: custos, despesas_venda: despesas, lucro_liquido: lucro, qtd_vendida: qtd,
+    ticket_medio: qtd > 0 ? total / qtd : 0,
+    margem: total > 0 ? ((lucro / total) * 100).toFixed(2) : 0,
+  };
+}
+
 function desde_(linhas, campo, periodo) {
   const inicio = intervaloPeriodo_(periodo);
   if (!inicio) return linhas;
@@ -109,20 +150,96 @@ function dashboardResumo_(tx, req) {
   const periodo = req.query.periodo || 'total';
   const vendas = desde_(tx.linhas('vendas'), 'data', periodo);
   const pagas = desde_(tx.linhas('contas_pagar').filter(function (c) { return c.status === 'paga'; }), 'data_pagamento', periodo);
-  const total = soma_(vendas, 'valor');
-  const custos = soma_(vendas, 'custo');
-  const qtd = soma_(vendas, 'quantidade');
-  const lucro = total - custos;
-  return {
-    total_vendas: total,
-    custos: custos,
+  const ant = intervaloAnterior_(periodo);
+  const anteriores = ant ? tx.linhas('vendas').filter(function (v) { return v.data && v.data >= ant.inicio && v.data < ant.fim; }) : null;
+  return Object.assign(resumoVendas_(vendas), {
     contas_pagas: soma_(pagas, 'valor'),
-    lucro_liquido: lucro,
-    qtd_vendida: qtd,
-    ticket_medio: qtd > 0 ? total / qtd : 0,
-    margem: total > 0 ? ((lucro / total) * 100).toFixed(2) : 0,
     periodo: periodo,
+    anterior: anteriores ? resumoVendas_(anteriores) : null,
+  });
+}
+
+const CANAIS_VENDA = ['OLX', 'Facebook', 'Instagram', 'WhatsApp', 'Loja online', 'Presencial', 'Indicação', 'Outro'];
+
+/** Vendas por canal e por forma de pagamento no período. */
+function dashboardCanais_(tx, req) {
+  const vendas = desde_(tx.linhas('vendas'), 'data', req.query.periodo || 'total').filter(function (v) { return !v.historico; });
+  const agrupar = function (campo, vazio) {
+    const g = {};
+    vendas.forEach(function (v) {
+      const k = v[campo] || vazio;
+      const x = g[k] || (g[k] = { nome: k, vendas: 0, qtd: 0, faturamento: 0, lucro: 0 });
+      x.vendas += 1;
+      x.qtd += Number(v.quantidade) || 0;
+      x.faturamento += Number(v.valor) || 0;
+      x.lucro += lucroVenda_(v);
+    });
+    return Object.keys(g).map(function (k) { return g[k]; }).sort(function (a, b) { return b.faturamento - a.faturamento; });
   };
+  return { canais: agrupar('canal', 'Não informado'), pagamentos: agrupar('forma_pagamento', 'Não informado') };
+}
+
+function configLer_(tx, chave) {
+  const c = tx.linhas('configuracoes').find(function (l) { return l.chave === chave; });
+  return c ? c.valor : null;
+}
+
+function configGravar_(tx, chave, valor) {
+  const agora = agoraIso_();
+  const c = tx.linhas('configuracoes').find(function (l) { return l.chave === chave; });
+  if (c) { c.valor = valor; c.atualizado_em = agora; tx.alterou('configuracoes'); }
+  else tx.inserir('configuracoes', { chave: chave, valor: valor, atualizado_em: agora });
+}
+
+/** Meta de faturamento do mês: quanto já vendeu, quanto falta e quanto vender por dia. */
+function dashboardMeta_(tx) {
+  const meta = num_(configLer_(tx, 'meta_faturamento_mes'));
+  const agora = new Date();
+  const doMes = desde_(tx.linhas('vendas'), 'data', 'mes').filter(function (v) { return !v.historico; });
+  const r = resumoVendas_(doMes);
+  const diasNoMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+  const diasRestantes = diasNoMes - agora.getDate() + 1; // conta hoje
+  const temMeta = meta !== null && meta > 0;
+  const falta = temMeta ? Math.max(0, meta - r.total_vendas) : null;
+  return {
+    meta: temMeta ? meta : null,
+    mes: Utilities.formatDate(agora, FUSO, 'yyyy-MM'),
+    faturamento: r.total_vendas,
+    lucro: r.lucro_liquido,
+    vendas: doMes.length,
+    falta: falta,
+    dias_restantes: diasRestantes,
+    por_dia: falta !== null ? falta / diasRestantes : null,
+    progresso: temMeta ? Math.min(100, (r.total_vendas / meta) * 100) : 0,
+  };
+}
+
+function dashboardMetaSalvar_(tx, req) {
+  const valor = num_(req.body.valor);
+  if (valor === null || valor < 0) throw erro_('Meta deve ser um valor em reais (0 para tirar a meta)');
+  configGravar_(tx, 'meta_faturamento_mes', String(valor));
+  return dashboardMeta_(tx);
+}
+
+/** Taxas da maquininha (%) por forma de pagamento. Pix e dinheiro: 0. */
+const TAXAS_PADRAO = { pix: 0, dinheiro: 0, cartao: 0, debito: 0 };
+
+function configVendasLer_(tx) {
+  let taxas = {};
+  try { taxas = JSON.parse(configLer_(tx, 'taxas_pagamento') || '{}') || {}; } catch (e) { taxas = {}; }
+  return { taxas: Object.assign({}, TAXAS_PADRAO, taxas), canais: CANAIS_VENDA };
+}
+
+function configVendasSalvar_(tx, req) {
+  const atual = configVendasLer_(tx).taxas;
+  const novas = (req.body && req.body.taxas) || {};
+  Object.keys(novas).forEach(function (k) {
+    const n = num_(novas[k]);
+    if (n === null || n < 0 || n > 30) throw erro_('Taxa inválida para ' + k + ' (use de 0 a 30%)');
+    atual[k] = n;
+  });
+  configGravar_(tx, 'taxas_pagamento', JSON.stringify(atual));
+  return configVendasLer_(tx);
 }
 
 function dashboardGrafico_(tx, req) {
@@ -136,7 +253,7 @@ function dashboardGrafico_(tx, req) {
     const k = chave(v.data);
     const g = vendas[k] || (vendas[k] = { periodo: k, faturamento: 0, custo: 0 });
     g.faturamento += Number(v.valor) || 0;
-    g.custo += Number(v.custo) || 0;
+    g.custo += (Number(v.custo) || 0) + despesasVenda_(v); // taxa e gastos extras também saem do lucro
   });
   const contas = {};
   desde_(tx.linhas('contas_pagar').filter(function (c) { return c.status === 'paga' && c.data_pagamento; }), 'data_pagamento', periodo)
@@ -157,7 +274,7 @@ function dashboardTopProdutos_(tx, req) {
     const g = grupos[k] || (grupos[k] = { produto_nome: k, qtd: 0, faturamento: 0, lucro: 0 });
     g.qtd += Number(v.quantidade) || 0;
     g.faturamento += Number(v.valor) || 0;
-    g.lucro += (Number(v.valor) || 0) - (Number(v.custo) || 0);
+    g.lucro += lucroVenda_(v);
   });
   return Object.keys(grupos).map(function (k) { return grupos[k]; })
     .sort(function (a, b) { return b[por] - a[por]; })
@@ -261,11 +378,16 @@ function vendasCriar_(tx, req) {
   const produto = tx.porId('produtos', b.produto_id);
   if (!produto) throw erro_('Produto não encontrado. Atualize a tela e tente de novo.');
   if (quantidade > produto.quantidade) throw erro_('"' + produto.nome + '": só há ' + produto.quantidade + ' no estoque');
+  const taxa = num_(b.taxa) || 0;
+  const gastos = num_(b.gastos_extras) || 0;
+  if (taxa < 0 || gastos < 0) throw erro_('Taxa e gastos extras não podem ser negativos');
+  const data = dataDaVenda_(b.data, agora);
 
   const venda = tx.inserir('vendas', {
     produto_id: int_(b.produto_id), produto_nome: b.produto_nome, quantidade: quantidade, valor: num_(b.valor),
-    custo: custo, forma_pagamento: b.forma_pagamento || null, data: agora, recebido: recebido, cliente: cliente,
-    receber_ate: recebido ? null : (b.receber_ate || null), data_recebimento: recebido ? agora : null, historico: false,
+    custo: custo, forma_pagamento: b.forma_pagamento || null, data: data, recebido: recebido, cliente: cliente,
+    receber_ate: recebido ? null : (b.receber_ate || null), data_recebimento: recebido ? data : null, historico: false,
+    canal: b.canal ? String(b.canal).slice(0, 40) : null, taxa: taxa, gastos_extras: gastos,
   });
 
   produto.quantidade -= quantidade;
@@ -276,6 +398,20 @@ function vendasCriar_(tx, req) {
     origem_tipo: 'venda', origem_id: venda.id, observacao: 'Venda #' + venda.id, data: agora,
   });
   return { ok: true, id: venda.id };
+}
+
+/**
+ * Data escolhida na tela (AAAA-MM-DD). Hoje ou vazio = agora; dia passado = meio-dia
+ * daquele dia (fuso de Brasília). Data no futuro é recusada.
+ */
+function dataDaVenda_(dia, agora) {
+  if (!dia) return agora;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dia))) throw erro_('Data da venda inválida');
+  const hoje = Utilities.formatDate(new Date(agora), FUSO, 'yyyy-MM-dd');
+  if (dia === hoje) return agora;
+  if (dia > hoje) throw erro_('A data da venda não pode ser no futuro');
+  const p = String(dia).split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2], 12, 0, 0).toISOString();
 }
 
 function vendasReceber_(tx, req) {

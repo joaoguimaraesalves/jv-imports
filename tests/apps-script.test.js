@@ -193,3 +193,82 @@ test('não depende da ordem em que o Google carrega os arquivos', () => {
   g.api('POST', '/api/produtos', { nome: 'Fone', custo: 10, preco: 50, quantidade: 3 });
   expect(g.api('GET', '/api/loja/config').pagamento).toMatch(/Pix/);
 });
+
+describe('venda completa (canal, taxa, gastos extras, data) e dashboard', () => {
+  const dia = (d) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+
+  function ambiente() {
+    const g = criarAmbiente();
+    g.api('POST', '/api/produtos', { nome: 'QCY T13', custo: 80, preco: 179, quantidade: 5 });
+    return g;
+  }
+
+  test('taxa e gastos extras saem do lucro; canal e forma de pagamento são agrupados', () => {
+    const g = ambiente();
+    g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 179, custo: 80,
+      forma_pagamento: 'cartao', canal: 'OLX', taxa: 6.25, gastos_extras: 10 });
+    g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 179, custo: 80,
+      forma_pagamento: 'pix', canal: 'Instagram' });
+
+    const d = g.api('GET', '/api/dashboard?periodo=30d');
+    expect(d.total_vendas).toBe(358);
+    expect(d.despesas_venda).toBeCloseTo(16.25);
+    expect(d.lucro_liquido).toBeCloseTo(358 - 160 - 16.25);
+    expect(d.anterior).toMatchObject({ total_vendas: 0 });
+
+    const c = g.api('GET', '/api/dashboard/canais?periodo=30d');
+    expect(c.canais.map((x) => x.nome).sort()).toEqual(['Instagram', 'OLX']);
+    expect(c.canais.find((x) => x.nome === 'OLX').lucro).toBeCloseTo(179 - 80 - 16.25);
+    expect(c.pagamentos.find((x) => x.nome === 'pix')).toMatchObject({ vendas: 1, faturamento: 179 });
+
+    const [top] = g.api('GET', '/api/dashboard/top-produtos?por=lucro&periodo=30d');
+    expect(top.lucro).toBeCloseTo(358 - 160 - 16.25);
+  });
+
+  test('saldo da conta conta só o que entrou de verdade (valor − taxa − gastos)', () => {
+    const g = ambiente();
+    g.api('PUT', '/api/caixa/saldo', { saldo: 100 });
+    // garante que a venda é registrada depois do saldo informado
+    const cfg = g.aba('configuracoes');
+    g.ctx.limparCache();
+    cfg.dados.forEach((l) => { if (l[0] === 'saldo_conta') l[2] = '2000-01-01T00:00:00.000Z'; });
+    g.ctx.limparCache();
+    g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 179, custo: 80,
+      forma_pagamento: 'cartao', taxa: 9, gastos_extras: 0 });
+    expect(g.api('GET', '/api/caixa').saldo_estimado).toBeCloseTo(100 + 170);
+  });
+
+  test('venda com data de ontem entra no dia certo; data no futuro é recusada', () => {
+    const g = ambiente();
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 179, custo: 80, data: dia(ontem) });
+    const [v] = g.api('GET', '/api/vendas');
+    expect(dia(new Date(v.data))).toBe(dia(ontem));
+    expect(v.data_recebimento).toBe(v.data);
+
+    const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+    expect(() => g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 179, custo: 80,
+      data: dia(amanha) })).toThrow(/futuro/);
+  });
+
+  test('meta do mês: quanto falta e quanto vender por dia', () => {
+    const g = ambiente();
+    expect(g.api('GET', '/api/dashboard/meta').meta).toBeNull();
+    g.api('POST', '/api/vendas', { produto_id: 1, produto_nome: 'QCY T13', quantidade: 1, valor: 200, custo: 80 });
+    const m = g.api('PUT', '/api/dashboard/meta', { valor: 1000 });
+    expect(m).toMatchObject({ meta: 1000, faturamento: 200, falta: 800 });
+    expect(m.por_dia).toBeCloseTo(800 / m.dias_restantes);
+    expect(m.progresso).toBeCloseTo(20);
+    expect(() => g.api('PUT', '/api/dashboard/meta', { valor: -5 })).toThrow(/Meta/);
+  });
+
+  test('taxas da maquininha ficam salvas', () => {
+    const g = ambiente();
+    expect(g.api('GET', '/api/config/vendas').taxas).toMatchObject({ pix: 0, cartao: 0 });
+    g.api('PUT', '/api/config/vendas', { taxas: { cartao: 4.98, debito: 1.99 } });
+    const c = g.api('GET', '/api/config/vendas');
+    expect(c.taxas).toMatchObject({ cartao: 4.98, debito: 1.99, pix: 0 });
+    expect(c.canais).toContain('OLX');
+    expect(() => g.api('PUT', '/api/config/vendas', { taxas: { cartao: 80 } })).toThrow(/Taxa inválida/);
+  });
+});

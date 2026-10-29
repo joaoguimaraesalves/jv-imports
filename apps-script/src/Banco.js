@@ -24,6 +24,9 @@ const ESQUEMA = {
     id: 'int', produto_id: 'int', produto_nome: 'text', quantidade: 'int', valor: 'num', custo: 'num',
     forma_pagamento: 'text', data: 'text', recebido: 'bool', cliente: 'text', receber_ate: 'text',
     data_recebimento: 'text', historico: 'bool',
+    // canal: onde vendeu (OLX, Instagram...). taxa: o que a maquininha cobrou (R$).
+    // gastos_extras: motoboy, embalagem etc. (R$). Os dois saem do lucro e do caixa.
+    canal: 'text', taxa: 'num', gastos_extras: 'num',
   },
   compras: {
     id: 'int', descricao: 'text', valor_total: 'num', forma_pagamento: 'text', parcelas: 'int',
@@ -306,6 +309,21 @@ function escreverCelula_(v, tipo) {
 const soma_ = function (linhas, campo) {
   return linhas.reduce(function (s, l) { return s + (Number(l[campo]) || 0); }, 0);
 };
+
+/** Taxa da maquininha + gastos extras de uma venda (vendas antigas não têm: contam 0). */
+function despesasVenda_(v) {
+  return (Number(v.taxa) || 0) + (Number(v.gastos_extras) || 0);
+}
+
+/** Lucro de verdade da venda: valor − custo do produto − taxa − gastos extras. */
+function lucroVenda_(v) {
+  return (Number(v.valor) || 0) - (Number(v.custo) || 0) - despesasVenda_(v);
+}
+
+/** Soma do que de fato entrou na conta (valor − taxa − gastos extras). */
+function somaLiquida_(vendas) {
+  return vendas.reduce(function (s, v) { return s + (Number(v.valor) || 0) - despesasVenda_(v); }, 0);
+}
 
 function agoraIso_() {
   return new Date().toISOString();

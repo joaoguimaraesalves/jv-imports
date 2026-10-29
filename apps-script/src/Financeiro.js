@@ -19,9 +19,10 @@ function saldoConta_(tx) {
   let contasPagasDesde = 0;
   let comprasVistaDesde = 0;
   if (desde) {
-    vendasDesde = soma_(tx.linhas('vendas').filter(function (v) {
+    // Entra na conta o valor menos a taxa da maquininha e os gastos extras da venda
+    vendasDesde = somaLiquida_(tx.linhas('vendas').filter(function (v) {
       return v.recebido && !v.historico && (v.data_recebimento || v.data) > desde;
-    }), 'valor');
+    }));
     contasPagasDesde = soma_(tx.linhas('contas_pagar').filter(function (c) {
       return c.status === 'paga' && c.data_pagamento && c.data_pagamento > desde;
     }), 'valor');
@@ -54,10 +55,11 @@ function totaisLongoPrazo_(tx) {
     vendas: {
       faturamento: soma_(vendas, 'valor'),
       custo: soma_(vendas, 'custo'),
+      despesas: vendas.reduce(function (s, v) { return s + despesasVenda_(v); }, 0),
       qtd: soma_(vendas, 'quantidade'),
       faturamento_hist: soma_(hist, 'valor'),
       custo_hist: soma_(hist, 'custo'),
-      recebido: soma_(vendas.filter(function (v) { return v.recebido; }), 'valor'),
+      recebido: somaLiquida_(vendas.filter(function (v) { return v.recebido; })),
       primeira_venda: menor(vendas),
     },
     compras: {
@@ -81,7 +83,7 @@ function totaisLongoPrazo_(tx) {
 
 /** Monta o resumo a partir dos totais e do saldo. */
 function montarResumo_(t, saldo) {
-  const lucroTotal = t.vendas.faturamento - t.vendas.custo;
+  const lucroTotal = t.vendas.faturamento - t.vendas.custo - (t.vendas.despesas || 0);
   const lucroHist = t.vendas.faturamento_hist - t.vendas.custo_hist;
   // Entrou (vendas recebidas) − saiu pela loja (compras pagas + contas pagas) − o que está
   // na conta = o que foi retirado ou usado fora da loja. É uma estimativa.
@@ -90,6 +92,7 @@ function montarResumo_(t, saldo) {
   return {
     faturamento_total: t.vendas.faturamento,
     custo_vendido: t.vendas.custo,
+    despesas_vendas: t.vendas.despesas || 0,
     lucro_total: lucroTotal,
     lucro_vendas_antigas: lucroHist,
     lucro_vendas_sistema: lucroTotal - lucroHist,

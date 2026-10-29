@@ -13,7 +13,11 @@ async function atualizarDashboardCompleto() {
         desenharGrafico(),
         carregarTopProdutos(),
         carregarProximasContas(),
-        carregarMetaCaixa()
+        carregarMetaCaixa(),
+        // Rotas novas: se não existirem (painel Node antigo), o resto do dashboard continua
+        carregarCanais().catch(() => {}),
+        carregarMetaMes().catch(() => {}),
+        carregarEstoqueBaixo().catch(() => {})
     ]);
 }
 
@@ -36,9 +40,150 @@ async function carregarDashboard() {
     document.getElementById('val-vendas').innerText   = formatarMoeda(d.total_vendas);
     document.getElementById('val-qtd').innerText      = d.qtd_vendida;
     document.getElementById('val-ticket').innerText   = formatarMoeda(d.ticket_medio);
-    document.getElementById('val-custos').innerText   = formatarMoeda(d.custos);
+    const despesas = Number(d.despesas_venda) || 0;
+    document.getElementById('val-custos').innerText   = formatarMoeda(d.custos + despesas);
+    document.getElementById('det-custos').innerText   = despesas ? `produto ${formatarMoeda(d.custos)} · taxas/extras ${formatarMoeda(despesas)}` : '';
     document.getElementById('val-margem').innerText   = d.margem + '%';
+
+    // "vs período anterior" (não existe em "Tudo")
+    const a = d.anterior;
+    mostrarVariacao('delta-lucro',  d.lucro_liquido, a && a.lucro_liquido);
+    mostrarVariacao('delta-vendas', d.total_vendas,  a && a.total_vendas);
+    mostrarVariacao('delta-qtd',    d.qtd_vendida,   a && a.qtd_vendida);
+    mostrarVariacao('delta-ticket', d.ticket_medio,  a && a.ticket_medio);
+    mostrarVariacao('delta-margem', Number(d.margem), a && Number(a.margem), true);
 }
+
+const NOME_PERIODO_ANTERIOR = { hoje: 'ontem', '7d': '7 dias antes', '30d': '30 dias antes', mes: 'mês passado', ano: 'ano passado' };
+
+// ▲ 12% vs mês passado. Margem compara em pontos percentuais (p.p.).
+function mostrarVariacao(id, atual, anterior, pontos = false) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'card-delta';
+    if (anterior === null || anterior === undefined || isNaN(anterior)) { el.textContent = ''; return; }
+    const quando = NOME_PERIODO_ANTERIOR[estadoDashboard.periodo] || 'período anterior';
+    let texto;
+    if (pontos) {
+        const dif = atual - anterior;
+        const seta = Math.abs(dif) < 0.05 ? '=' : dif > 0 ? '▲' : '▼';
+        texto = `${seta} ${Math.abs(dif).toFixed(1)} p.p. vs ${quando}`;
+        if (seta !== '=') el.classList.add(dif > 0 ? 'sobe' : 'desce');
+    } else if (anterior === 0) {
+        texto = atual > 0 ? `▲ novo · ${quando}: 0` : `= ${quando}: 0`;
+        if (atual > 0) el.classList.add('sobe');
+    } else {
+        const pct = ((atual - anterior) / Math.abs(anterior)) * 100;
+        texto = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}% vs ${quando}`;
+        el.classList.add(pct >= 0 ? 'sobe' : 'desce');
+    }
+    el.textContent = texto;
+}
+
+// ---------- Vendas por canal e por pagamento (barras simples, boas no celular) ----------
+function desenharRanking(id, itens, nomear = (n) => n) {
+    const box = document.getElementById(id);
+    if (!itens.length) {
+        box.innerHTML = '<div class="ranking-vazio">Sem vendas no período.</div>';
+        return;
+    }
+    const total = itens.reduce((s, x) => s + x.faturamento, 0) || 1;
+    box.innerHTML = itens.map(x => {
+        const pct = (x.faturamento / total) * 100;
+        return `
+            <div class="ranking-item">
+                <div class="ranking-linha">
+                    <span class="ranking-nome">${esc(nomear(x.nome))}</span>
+                    <span class="ranking-valor">${formatarMoeda(x.faturamento)} <small>${pct.toFixed(0)}%</small></span>
+                </div>
+                <div class="ranking-barra"><div style="width: ${pct.toFixed(1)}%"></div></div>
+                <small class="ranking-detalhe">${x.vendas} venda${x.vendas === 1 ? '' : 's'} · lucro ${formatarMoeda(x.lucro)}</small>
+            </div>`;
+    }).join('');
+}
+
+async function carregarCanais() {
+    const d = await fetchJSON(`/api/dashboard/canais?periodo=${estadoDashboard.periodo}`);
+    desenharRanking('lista-canais', d.canais);
+    desenharRanking('lista-pagamentos', d.pagamentos, (n) => n === 'Não informado' ? n : nomePagamento(n));
+}
+
+// ---------- Meta de faturamento do mês ----------
+async function carregarMetaMes(dados) {
+    const m = dados || await fetchJSON('/api/dashboard/meta');
+    const input = document.getElementById('meta-input');
+    if (document.activeElement !== input) input.value = m.meta || '';
+    const barra = document.getElementById('meta-progresso');
+    const resumo = document.getElementById('meta-resumo');
+    const dica = document.getElementById('meta-dica');
+    const nomeMes = new Date(m.mes + '-01T12:00:00').toLocaleDateString('pt-BR', { month: 'long' });
+
+    if (!m.meta) {
+        barra.style.width = '0%';
+        resumo.innerHTML = `
+            <div><span>Vendido em ${nomeMes}</span><strong>${formatarMoeda(m.faturamento)}</strong></div>
+            <div><span>Lucro em ${nomeMes}</span><strong>${formatarMoeda(m.lucro)}</strong></div>`;
+        dica.className = 'caixa-destaque';
+        dica.innerHTML = 'Defina quanto quer faturar este mês e o painel mostra quanto falta vender por dia. 🎯';
+        return;
+    }
+    barra.style.width = m.progresso.toFixed(1) + '%';
+    barra.className = m.progresso >= 100 ? 'completa' : '';
+    resumo.innerHTML = `
+        <div><span>Vendido em ${nomeMes}</span><strong>${formatarMoeda(m.faturamento)}</strong></div>
+        <div><span>Meta</span><strong>${formatarMoeda(m.meta)}</strong></div>
+        <div><span>Falta</span><strong>${formatarMoeda(m.falta)}</strong></div>
+        <div><span>Dias restantes</span><strong>${m.dias_restantes}</strong></div>
+        <div><span>Vender por dia</span><strong>${formatarMoeda(m.por_dia)}</strong></div>`;
+    if (m.falta <= 0) {
+        dica.className = 'caixa-destaque ok';
+        dica.innerHTML = `🎉 Meta de ${nomeMes} batida! Lucro do mês: <strong>${formatarMoeda(m.lucro)}</strong>.`;
+    } else {
+        dica.className = 'caixa-destaque';
+        dica.innerHTML = `${m.progresso.toFixed(0)}% da meta. Faltam <strong>${formatarMoeda(m.falta)}</strong> em ${m.dias_restantes} dia${m.dias_restantes === 1 ? '' : 's'}: cerca de <strong>${formatarMoeda(m.por_dia)} por dia</strong>.`;
+    }
+}
+
+async function salvarMetaMes(event) {
+    event.preventDefault();
+    const valor = parseFloat(document.getElementById('meta-input').value) || 0;
+    const m = await fetchJSON('/api/dashboard/meta', { method: 'PUT', body: JSON.stringify({ valor }) });
+    document.getElementById('meta-input').blur();
+    carregarMetaMes(m);
+}
+
+// ---------- Estoque baixo ----------
+async function carregarEstoqueBaixo() {
+    const produtos = await fetchJSON('/api/produtos');
+    const box = document.getElementById('lista-estoque-baixo');
+    const acabando = produtos.filter(p => p.quantidade > 0 && p.quantidade <= 2).sort((a, b) => a.quantidade - b.quantidade);
+    const esgotados = produtos.filter(p => p.quantidade <= 0);
+    if (!acabando.length && !esgotados.length) {
+        box.innerHTML = '<div class="ranking-vazio">Nenhum produto acabando. ✅</div>';
+        return;
+    }
+    box.innerHTML = acabando.map(p => `
+        <div class="proxima-conta">
+            <div class="proxima-conta-info">
+                <span class="proxima-conta-desc">${esc(p.nome)}</span>
+                <span class="proxima-conta-data">${p.quantidade === 1 ? 'Última unidade' : 'Restam ' + p.quantidade}</span>
+            </div>
+            <span class="badge badge-pendente">${p.quantidade} un</span>
+        </div>`).join('') + (esgotados.length ? `
+        <details class="esgotados">
+            <summary>${esgotados.length} esgotado${esgotados.length === 1 ? '' : 's'}</summary>
+            <p>${esgotados.map(p => esc(p.nome)).join(' · ')}</p>
+        </details>` : '');
+}
+
+// ---------- Esconder valores (para abrir o painel perto de outras pessoas) ----------
+function alternarValores(forcar) {
+    const ocultar = typeof forcar === 'boolean' ? forcar : !document.body.classList.contains('valores-ocultos');
+    document.body.classList.toggle('valores-ocultos', ocultar);
+    document.getElementById('btn-olho').textContent = ocultar ? '🙈' : '👁';
+    try { localStorage.setItem('jv-ocultar-valores', ocultar ? '1' : '0'); } catch (e) {}
+}
+try { if (localStorage.getItem('jv-ocultar-valores') === '1') alternarValores(true); } catch (e) {}
 
 // Lê as cores do tema atual (variáveis CSS do :root) para o Chart.js
 function coresTema() {

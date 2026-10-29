@@ -63,18 +63,34 @@
                 <option value="mes">Este mês</option>
                 <option value="ano">Este ano</option>
             </select>
+            <button class="btn-gray btn-olho" id="btn-olho" onclick="alternarValores()" title="Esconder/mostrar valores" aria-label="Esconder ou mostrar valores">👁</button>
             <button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda Rápida</button>
         </div>
     </div>
 
     <div class="cards-grid">
-        <div class="card bg-green"><div class="card-header"><span>Lucro Líquido</span></div><div class="card-value" id="val-lucro">R$ 0,00</div></div>
-        <div class="card bg-blue"><div class="card-header"><span>Total em Vendas</span></div><div class="card-value" id="val-vendas">R$ 0,00</div></div>
+        <div class="card bg-green"><div class="card-header"><span>Lucro Líquido</span></div><div class="card-value" id="val-lucro">R$ 0,00</div><small class="card-delta" id="delta-lucro"></small></div>
+        <div class="card bg-blue"><div class="card-header"><span>Total em Vendas</span></div><div class="card-value" id="val-vendas">R$ 0,00</div><small class="card-delta" id="delta-vendas"></small></div>
         <div class="card bg-red"><div class="card-header"><span>Contas Pagas</span></div><div class="card-value" id="val-despesas">R$ 0,00</div></div>
-        <div class="card bg-purple"><div class="card-header"><span>Qtd. Vendida</span></div><div class="card-value" id="val-qtd">0</div></div>
-        <div class="card bg-orange"><div class="card-header"><span>Ticket Médio</span></div><div class="card-value" id="val-ticket">R$ 0,00</div></div>
-        <div class="card bg-red"><div class="card-header"><span>Custos de Produto</span></div><div class="card-value" id="val-custos">R$ 0,00</div></div>
-        <div class="card bg-green"><div class="card-header"><span>Margem</span></div><div class="card-value" id="val-margem">0.0%</div></div>
+        <div class="card bg-purple"><div class="card-header"><span>Qtd. Vendida</span></div><div class="card-value" id="val-qtd">0</div><small class="card-delta" id="delta-qtd"></small></div>
+        <div class="card bg-orange"><div class="card-header"><span>Ticket Médio</span></div><div class="card-value" id="val-ticket">R$ 0,00</div><small class="card-delta" id="delta-ticket"></small></div>
+        <div class="card bg-red"><div class="card-header"><span>Custos (produto + taxas)</span></div><div class="card-value" id="val-custos">R$ 0,00</div><small class="card-delta" id="det-custos"></small></div>
+        <div class="card bg-green"><div class="card-header"><span>Margem</span></div><div class="card-value" id="val-margem">0.0%</div><small class="card-delta" id="delta-margem"></small></div>
+    </div>
+
+    <!-- Meta de faturamento do mês -->
+    <div class="chart-container" id="meta-mes">
+        <div class="chart-header">
+            <h3>🎯 Meta de faturamento do mês</h3>
+            <form class="saldo-form" onsubmit="salvarMetaMes(event)">
+                <label for="meta-input">Meta (R$)</label>
+                <input type="number" id="meta-input" step="0.01" min="0" placeholder="Ex.: 3000">
+                <button type="submit" class="btn-green">Salvar</button>
+            </form>
+        </div>
+        <div class="meta-barra" aria-hidden="true"><div id="meta-progresso"></div></div>
+        <div class="caixa-resumo" id="meta-resumo"></div>
+        <div id="meta-dica" class="caixa-destaque"></div>
     </div>
 
     <!-- Meta de Caixa: saldo da conta x contas a pagar -->
@@ -124,6 +140,24 @@
         </div>
     </div>
 
+    <div class="dashboard-row">
+        <div class="chart-container" style="flex: 1;">
+            <div class="chart-header"><h3>📣 Vendas por canal</h3></div>
+            <div id="lista-canais" class="ranking"></div>
+        </div>
+        <div class="chart-container" style="flex: 1;">
+            <div class="chart-header"><h3>💳 Vendas por pagamento</h3></div>
+            <div id="lista-pagamentos" class="ranking"></div>
+        </div>
+        <div class="chart-container" style="flex: 1;">
+            <div class="chart-header">
+                <h3>⚠️ Estoque baixo</h3>
+                <a href="#" class="link-ver" onclick="mudarTela('produtos'); return false;">Ver estoque</a>
+            </div>
+            <div id="lista-estoque-baixo"></div>
+        </div>
+    </div>
+
     <div class="chart-container">
         <div class="chart-header">
             <h3>Top Produtos</h3>
@@ -146,7 +180,13 @@
         <div id="tela-produtos" class="tela">
             <div class="header">
                 <h2>Estoque da Loja</h2>
-                <button class="btn-blue" onclick="abrirModalProduto()">+ Cadastrar Produto</button>
+                <div class="header-acoes">
+                    <input type="search" id="busca-produtos" class="input-busca" placeholder="🔍 Buscar produto..." oninput="renderizarProdutos()">
+                    <button class="btn-blue" onclick="abrirModalProduto()">+ Cadastrar Produto</button>
+                </div>
+            </div>
+            <div class="chart-container resumo-estoque">
+                <div class="caixa-resumo" id="resumo-estoque"></div>
             </div>
             <table>
                 <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>No site</th><th>Ações</th></tr></thead>
@@ -158,16 +198,35 @@
         <div id="tela-vendas" class="tela">
             <div class="header">
                 <h2>Histórico de Vendas</h2>
-                <div style="display: flex; gap: 10px;">
-                    <select id="filtro-vendas" class="select-filtro" onchange="carregarVendas()">
-                        <option value="todas">Todas</option>
-                        <option value="a-receber">A receber (fiado)</option>
-                    </select>
-                    <button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda</button>
-                </div>
+                <button class="btn-green" onclick="abrirModalVenda()">+ Nova Venda</button>
             </div>
+            <div class="filtros-vendas">
+                <input type="search" id="busca-vendas" class="input-busca" placeholder="🔍 Produto, cliente ou canal..." oninput="renderizarVendas()">
+                <select id="filtro-vendas-periodo" class="select-filtro" onchange="renderizarVendas()">
+                    <option value="todas">Todo o período</option>
+                    <option value="hoje">Hoje</option>
+                    <option value="7d">Últimos 7 dias</option>
+                    <option value="30d">Últimos 30 dias</option>
+                    <option value="mes">Este mês</option>
+                </select>
+                <select id="filtro-vendas-canal" class="select-filtro" onchange="renderizarVendas()">
+                    <option value="">Todos os canais</option>
+                </select>
+                <select id="filtro-vendas-pagamento" class="select-filtro" onchange="renderizarVendas()">
+                    <option value="">Todos os pagamentos</option>
+                    <option value="pix">Pix</option>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="cartao">Cartão de crédito</option>
+                    <option value="debito">Cartão de débito</option>
+                </select>
+                <select id="filtro-vendas" class="select-filtro" onchange="renderizarVendas()">
+                    <option value="todas">Pagas e a receber</option>
+                    <option value="a-receber">Só a receber (fiado)</option>
+                </select>
+            </div>
+            <div class="caixa-resumo resumo-vendas" id="resumo-vendas"></div>
             <table>
-                <thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Pagamento</th><th>Lucro da Venda</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Data</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Canal</th><th>Pagamento</th><th>Lucro da Venda</th><th>Ações</th></tr></thead>
                 <tbody id="lista-vendas"></tbody>
             </table>
         </div>
@@ -368,22 +427,46 @@
                         <option value="">Carregando produtos...</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Quantidade Vendida</label>
-                    <input type="number" id="venda-qtd" min="1" value="1" required oninput="atualizarTotalVenda()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantidade</label>
+                        <input type="number" id="venda-qtd" min="1" value="1" required oninput="atualizarTotalVenda()">
+                    </div>
+                    <div class="form-group">
+                        <label>Data da venda</label>
+                        <input type="date" id="venda-data" required>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Valor Total Cobrado (R$)</label>
-                    <input type="number" id="venda-valor" step="0.01" required>
-                    <small style="color: var(--text-muted); font-size: 0.8rem;">Calculado automaticamente, mas você pode dar descontos.</small>
+                    <input type="number" id="venda-valor" step="0.01" min="0" required oninput="atualizarResumoVenda()">
+                    <small class="dica-campo">Calculado automaticamente, mas você pode dar descontos.</small>
                 </div>
                 <div class="form-group">
-                    <label>Forma de Pagamento</label>
-                    <select id="venda-pagamento" required>
-                        <option value="dinheiro">Dinheiro</option>
-                        <option value="pix" selected>PIX</option>
-                        <option value="cartao">Cartão</option>
+                    <label>Onde vendeu? (canal)</label>
+                    <select id="venda-canal" required>
+                        <option value="">Selecione...</option>
                     </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Forma de Pagamento</label>
+                        <select id="venda-pagamento" required onchange="mudarPagamentoVenda()">
+                            <option value="pix" selected>Pix</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao">Cartão de crédito</option>
+                            <option value="debito">Cartão de débito</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="grupo-taxa" style="display: none;">
+                        <label>Taxa da maquininha (%)</label>
+                        <input type="number" id="venda-taxa-pct" step="0.01" min="0" max="30" oninput="atualizarResumoVenda()">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Gastos extras (R$, opcional)</label>
+                    <input type="number" id="venda-gastos" step="0.01" min="0" placeholder="Motoboy, embalagem, Uber..." oninput="atualizarResumoVenda()">
+                    <small class="dica-campo">Diminui o seu lucro, não o valor cobrado do cliente.</small>
                 </div>
                 <div class="form-group">
                     <label>Quando paga</label>
@@ -396,11 +479,25 @@
                     <div class="form-group"><label>Cliente</label><input type="text" id="venda-cliente" placeholder="Quem vai pagar"></div>
                     <div class="form-group"><label>Vai pagar até</label><input type="date" id="venda-receber-ate"></div>
                 </div>
+                <div class="venda-resumo" id="venda-resumo"></div>
                 <div class="modal-actions">
                     <button type="button" class="btn-gray" onclick="fecharModal('modal-venda')">Cancelar</button>
                     <button type="submit" class="btn-green">Salvar Venda</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal: Recibo -->
+    <div id="modal-recibo" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🧾 Recibo da venda</h3>
+            <pre id="recibo-texto" class="recibo-texto"></pre>
+            <div class="modal-actions">
+                <button type="button" class="btn-gray" onclick="fecharModal('modal-recibo')">Fechar</button>
+                <button type="button" class="btn-blue" id="recibo-copiar" onclick="copiarRecibo()">Copiar</button>
+                <a class="btn-green link-botao" id="recibo-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+            </div>
         </div>
     </div>
 

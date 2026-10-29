@@ -12,17 +12,44 @@ function situacaoNoSite(p) {
 }
 
 async function carregarProdutos() {
-    const produtos = await fetchJSON('/api/produtos');
-    produtosCadastro = produtos;
+    produtosCadastro = await fetchJSON('/api/produtos');
+    renderizarProdutos();
+}
+
+// Resumo do estoque: quanto dinheiro está parado e quanto ele vira se vender tudo
+function resumoEstoque(produtos) {
+    const comEstoque = produtos.filter(p => p.quantidade > 0);
+    const custo = comEstoque.reduce((s, p) => s + (Number(p.custo) || 0) * p.quantidade, 0);
+    const venda = comEstoque.reduce((s, p) => s + (Number(p.preco) || 0) * p.quantidade, 0);
+    const unidades = comEstoque.reduce((s, p) => s + p.quantidade, 0);
+    return { custo, venda, unidades, produtos: comEstoque.length, lucro: venda - custo, margem: venda > 0 ? ((venda - custo) / venda) * 100 : 0 };
+}
+
+function renderizarProdutos() {
+    const r = resumoEstoque(produtosCadastro);
+    document.getElementById('resumo-estoque').innerHTML = `
+        <div><span>Estoque a preço de custo</span><strong style="color: var(--color-red)">${formatarMoeda(r.custo)}</strong><small class="texto-suave">${r.produtos} produtos · ${r.unidades} unidades</small></div>
+        <div><span>Se vender tudo</span><strong style="color: var(--color-blue)">${formatarMoeda(r.venda)}</strong><small class="texto-suave">pelo preço de venda</small></div>
+        <div><span>Lucro possível</span><strong style="color: var(--color-green)">${formatarMoeda(r.lucro)}</strong><small class="texto-suave">venda − custo</small></div>
+        <div><span>Margem média</span><strong>${r.margem.toFixed(1)}%</strong><small class="texto-suave">lucro sobre a venda</small></div>`;
+
+    const busca = (document.getElementById('busca-produtos').value || '').trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const produtos = !busca ? produtosCadastro : produtosCadastro.filter(p =>
+        `${p.nome} ${p.categoria || ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(busca));
     const tbody = document.getElementById('lista-produtos');
     tbody.innerHTML = '';
+    if (!produtos.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">${busca ? 'Nenhum produto com esse nome.' : 'Nenhum produto cadastrado ainda.'}</td></tr>`;
+        return;
+    }
 
     produtos.forEach(p => {
         const estoqueBaixo = p.quantidade <= 2;
         tbody.innerHTML += `
             <tr>
                 <td>#${p.id}</td>
-                <td>${p.nome}</td>
+                <td>${p.nome}${p.categoria ? `<small class="venda-cliente">${p.categoria}</small>` : ''}</td>
                 <td>${formatarMoeda(p.custo)}</td>
                 <td>${p.preco > 0 ? formatarMoeda(p.preco) : '<span class="badge badge-pendente">Sem preço</span>'}</td>
                 <td style="${estoqueBaixo ? 'color: var(--color-red); font-weight: bold;' : ''}">${p.quantidade} un</td>
