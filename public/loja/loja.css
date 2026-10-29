@@ -228,7 +228,7 @@ a { color: inherit; }
 .selo-esgotado { background: rgba(7, 9, 13, 0.9); color: var(--texto-2); }
 
 .card-corpo { display: flex; flex-direction: column; gap: 6px; padding: 12px; flex: 1; }
-.card-cat { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-3); font-weight: 600; }
+.card-cat { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card h3 { font-size: 0.95rem; font-weight: 600; line-height: 1.3; color: var(--texto); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card h3 button { text-align: left; }
 .preco { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-top: auto; padding-top: 4px; }
