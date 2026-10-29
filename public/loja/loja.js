@@ -12,7 +12,9 @@
         produtos: [],
         porId: new Map(),
         assinatura: '',
-        categoria: 'todas',
+        categoria: 'todas',     // chave normalizada da categoria
+        marca: 'todas',
+        soDisponiveis: false,
         busca: '',
         sacola: lerSacola(),     // [{ id, qtd }]
         abertoId: null,
@@ -93,28 +95,71 @@
     }
 
     // ---------- Vitrine ----------
+    // Abas principais nesta ordem; categorias novas entram depois, em ordem alfabética.
+    const ORDEM_CATEGORIAS = ['fones', 'carregadores e adaptadores', 'ferramentas'];
+    // Marcas reconhecidas no nome do produto (a primeira que aparecer vale).
+    const MARCAS = ['QCY', 'KZ', 'Redmi', 'Xiaomi', 'MCHOSE', 'Essager', 'Baseus', 'Ugreen', 'Anker', 'Soundcore',
+        'JBL', 'Edifier', 'Haylou', 'Lenovo', 'Soundpeats', 'Samsung', 'Apple', 'Sony', 'Philips', 'Havit',
+        'TRN', 'CCA', 'Moondrop', 'Tangzu', 'Truthear', 'Tranya', 'Awei', 'Lehmox', 'Kaidi'];
+    const MARCA_POR_CHAVE = new Map(MARCAS.map((m) => [normalizar(m), m]));
+
+    function marcaDe(p) {
+        for (const palavra of String(p.nome || '').split(/[\s/()-]+/)) {
+            const m = MARCA_POR_CHAVE.get(normalizar(palavra));
+            if (m) return m;
+        }
+        return null;
+    }
+    const temMarcas = (cat) => cat.startsWith('fone');
+
     function categorias() {
-        const set = new Map();
-        for (const p of estado.produtos) if (p.categoria) set.set(normalizar(p.categoria), p.categoria);
-        return [...set.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const mapa = new Map();
+        for (const p of estado.produtos) {
+            if (!p.categoria) continue;
+            const k = normalizar(p.categoria);
+            if (!mapa.has(k)) mapa.set(k, { chave: k, rotulo: p.categoria, total: 0 });
+            mapa.get(k).total++;
+        }
+        const pos = (k) => { const i = ORDEM_CATEGORIAS.indexOf(k); return i < 0 ? 99 : i; };
+        return [...mapa.values()].sort((a, b) => pos(a.chave) - pos(b.chave) || a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
+    }
+
+    function marcasDaCategoria() {
+        const mapa = new Map();
+        for (const p of estado.produtos) {
+            if (normalizar(p.categoria) !== estado.categoria) continue;
+            const m = marcaDe(p) || 'Outras';
+            mapa.set(m, (mapa.get(m) || 0) + 1);
+        }
+        return [...mapa.entries()].sort((a, b) => (a[0] === 'Outras') - (b[0] === 'Outras') || b[1] - a[1] || a[0].localeCompare(b[0]));
     }
 
     function desenharChips() {
         const cats = categorias();
-        if (estado.categoria !== 'todas' && estado.categoria !== 'disponiveis' &&
-            !cats.some((c) => normalizar(c) === estado.categoria)) estado.categoria = 'todas';
-        const opcoes = [['todas', 'Todos'], ['disponiveis', 'Pronta entrega']]
-            .concat(cats.map((c) => [normalizar(c), c]));
-        $('chips').innerHTML = opcoes.map(([v, rotulo]) =>
-            `<button type="button" class="chip" role="tab" data-cat="${esc(v)}" aria-selected="${v === estado.categoria}">${esc(rotulo)}</button>`
-        ).join('');
+        if (estado.categoria !== 'todas' && !cats.some((c) => c.chave === estado.categoria)) estado.categoria = 'todas';
+        const chip = (attrs, rotulo, total, ativo) =>
+            `<button type="button" class="chip" role="tab" ${attrs} aria-selected="${ativo}">${esc(rotulo)}${total != null ? ` <span class="chip-n">${total}</span>` : ''}</button>`;
+        $('chips').innerHTML =
+            chip('data-cat="todas"', 'Todos', estado.produtos.length, estado.categoria === 'todas') +
+            cats.map((c) => chip(`data-cat="${esc(c.chave)}"`, c.rotulo, c.total, c.chave === estado.categoria)).join('') +
+            `<button type="button" class="chip chip-toggle" data-pronta aria-pressed="${estado.soDisponiveis}">⚡ Pronta entrega</button>`;
+
+        // Dentro de Fones: filtro por marca (só aparece se houver mais de uma)
+        const marcas = estado.categoria !== 'todas' && temMarcas(estado.categoria) ? marcasDaCategoria() : [];
+        if (estado.marca !== 'todas' && !marcas.some(([m]) => m === estado.marca)) estado.marca = 'todas';
+        const sub = $('marcas');
+        sub.hidden = marcas.length < 2;
+        sub.innerHTML = sub.hidden ? '' :
+            chip('data-marca="todas"', 'Todas as marcas', null, estado.marca === 'todas') +
+            marcas.map(([m, n]) => chip(`data-marca="${esc(m)}"`, m, n, m === estado.marca)).join('');
     }
 
     function filtrados() {
         const termo = normalizar(estado.busca).trim();
         return estado.produtos.filter((p) => {
-            if (estado.categoria === 'disponiveis' && !p.disponivel) return false;
-            if (estado.categoria !== 'todas' && estado.categoria !== 'disponiveis' && normalizar(p.categoria) !== estado.categoria) return false;
+            if (estado.soDisponiveis && !p.disponivel) return false;
+            if (estado.categoria !== 'todas' && normalizar(p.categoria) !== estado.categoria) return false;
+            if (estado.marca !== 'todas' && (marcaDe(p) || 'Outras') !== estado.marca) return false;
             if (termo && !normalizar(p.nome + ' ' + p.categoria + ' ' + p.descricao).includes(termo)) return false;
             return true;
         });
@@ -160,7 +205,7 @@
             return `<article class="card${p.disponivel ? '' : ' esgotado'}${mudaram.has(p.id) ? ' mudou' : ''}" data-id="${p.id}">
                 <button type="button" class="card-foto" data-abrir="${p.id}" aria-label="Ver ${esc(p.nome)}">${fotoHtml(p)}${selosHtml(p)}</button>
                 <div class="card-corpo">
-                    ${p.categoria ? `<span class="card-cat">${esc(p.categoria)}</span>` : ''}
+                    ${p.categoria || marcaDe(p) ? `<span class="card-cat">${esc([p.categoria, marcaDe(p)].filter(Boolean).join(' · '))}</span>` : ''}
                     <h3><button type="button" data-abrir="${p.id}">${esc(p.nome)}</button></h3>
                     ${precoHtml(p)}
                     ${estoqueHtml(p)}
@@ -187,7 +232,9 @@
         if (!p) { $('dlg-produto').close(); return; }
         estado.qtdModal = Math.max(1, Math.min(estado.qtdModal, p.max_compra || 1));
         $('dp-foto').innerHTML = fotoHtml(p) + selosHtml(p);
-        $('dp-cat').textContent = p.categoria || '';
+        // Fundo desfocado com a própria foto: sem faixas vazias nas fotos em pé
+        $('dp-foto').style.setProperty('--foto-fundo', p.foto ? `url("${p.foto.replace(/["\\]/g, '')}")` : 'none');
+        $('dp-cat').textContent = [p.categoria, marcaDe(p)].filter(Boolean).join(' · ');
         $('dp-nome').textContent = p.nome;
         $('dp-preco').innerHTML = precoHtml(p).replace(/^<div class="preco">|<\/div>$/g, '');
         const est = $('dp-estoque');
@@ -374,7 +421,9 @@
         if (d.abrir) return abrirProduto(Number(d.abrir));
         if (d.add) return adicionar(Number(d.add));
         if (d.encomendar) { const p = estado.porId.get(Number(d.encomendar)); if (p) comprarAgora(p, 1); return; }
-        if (d.cat) { estado.categoria = d.cat; desenharChips(); desenharGrade(); return; }
+        if (d.cat) { estado.categoria = d.cat; estado.marca = 'todas'; desenharChips(); desenharGrade(); return; }
+        if (d.marca) { estado.marca = d.marca; desenharChips(); desenharGrade(); return; }
+        if (alvo.hasAttribute('data-pronta')) { estado.soDisponiveis = !estado.soDisponiveis; desenharChips(); desenharGrade(); return; }
         if (d.menos) return mudarQtd(Number(d.menos), -1);
         if (d.mais) return mudarQtd(Number(d.mais), +1);
         if (d.remover) return remover(Number(d.remover));
