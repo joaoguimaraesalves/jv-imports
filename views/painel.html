@@ -1,10 +1,12 @@
-<!-- public/index.html -->
+<!-- views/painel.html (servido em /painel, só com login) -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JV Imports - Gestão</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="/loja/icone-192.png">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -27,11 +29,14 @@
             <li id="menu-contas-pagar" onclick="mudarTela('contas-pagar')">💳 Contas a Pagar</li>
             <li id="menu-movimentos"   onclick="mudarTela('movimentos')">🔄 Movimentos</li>
             <li id="menu-historico"    onclick="mudarTela('historico')">📜 Histórico da Loja</li>
+            <li id="menu-loja"         onclick="mudarTela('loja')">🛍️ Loja Online</li>
         </ul>
         <div class="sidebar-footer">
             <button id="btn-tema" class="btn-tema" onclick="alternarTema()">
                 <span id="tema-icone">🌙</span><span id="tema-texto">Modo Escuro</span>
             </button>
+            <a class="btn-tema" href="/" data-link-loja target="_blank" rel="noopener">🛍️ <span>Ver a loja</span></a>
+            <button class="btn-tema" onclick="sairDoPainel()">🚪 <span>Sair</span></button>
         </div>
     </aside>
 
@@ -144,7 +149,7 @@
                 <button class="btn-blue" onclick="abrirModalProduto()">+ Cadastrar Produto</button>
             </div>
             <table>
-                <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>Ações</th></tr></thead>
+                <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>No site</th><th>Ações</th></tr></thead>
                 <tbody id="lista-produtos"></tbody>
             </table>
         </div>
@@ -177,6 +182,76 @@
                 <thead><tr><th>Data</th><th>Descrição</th><th>Pagamento</th><th>Valor Total</th><th>Ações</th></tr></thead>
                 <tbody id="lista-compras"></tbody>
             </table>
+        </div>
+
+        <!-- Loja Online -->
+        <div id="tela-loja" class="tela">
+            <div class="header">
+                <h2>Loja Online</h2>
+                <a class="btn-blue" href="/" data-link-loja target="_blank" rel="noopener" style="text-decoration:none">Abrir a loja ↗</a>
+            </div>
+
+            <div class="loja-link chart-container">
+                <div>
+                    <strong>Link da sua loja</strong>
+                    <p class="caixa-saldo-info">Coloque na bio do Instagram, no status e nas conversas do WhatsApp. O estoque do site é o mesmo daqui: vendeu no painel, atualiza no site sozinho.</p>
+                </div>
+                <div class="loja-link-linha">
+                    <input type="text" id="loja-url" readonly onclick="this.select()">
+                    <button class="btn-green" onclick="copiarLinkLoja()">Copiar link</button>
+                </div>
+            </div>
+
+            <div class="chart-container loja-publicacao" id="loja-publicacao">
+                <div>
+                    <strong>Publicação na Cloudflare</strong>
+                    <p class="caixa-saldo-info" id="loja-publicacao-texto">Verificando...</p>
+                </div>
+                <button class="btn-gray" id="loja-republicar" onclick="republicarLoja()">↻ Republicar agora</button>
+            </div>
+
+            <!-- Só no painel do Apps Script (no Node, isso vem das variáveis do Render) -->
+            <form class="chart-container" id="loja-cloudflare" onsubmit="salvarConexaoCloudflare(event)" hidden>
+                <h3 style="margin-bottom: 6px;">Conexão com a Cloudflare</h3>
+                <p class="caixa-saldo-info">Onde o site da loja fica hospedado. Passo a passo no README do projeto ("Ligar a loja na Cloudflare").</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Account ID</label><input type="text" id="cf-conta" autocomplete="off" spellcheck="false" placeholder="32 letras e números"></div>
+                    <div class="form-group"><label>KV Namespace ID</label><input type="text" id="cf-namespace" autocomplete="off" spellcheck="false" placeholder="32 letras e números"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label id="cf-token-label">Token da API</label><input type="password" id="cf-token" autocomplete="new-password" spellcheck="false"></div>
+                    <div class="form-group"><label>Endereço da loja</label><input type="text" id="cf-site" placeholder="Ex.: https://jv-imports.pages.dev"></div>
+                </div>
+                <div class="modal-actions" style="justify-content:flex-start">
+                    <button type="submit" class="btn-green" id="cf-salvar">Salvar e publicar</button>
+                </div>
+            </form>
+
+            <div class="cards-grid" id="loja-saude"></div>
+
+            <form class="chart-container" onsubmit="salvarConfigLoja(event)">
+                <h3 style="margin-bottom: 15px;">Configurações da loja</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>WhatsApp que recebe os pedidos (com DDD)</label><input type="tel" id="loja-whatsapp" placeholder="Ex: (61) 99999-9999" required></div>
+                    <div class="form-group"><label>Instagram (opcional)</label><input type="text" id="loja-instagram" placeholder="Ex: @jvimports"></div>
+                </div>
+                <div class="form-group"><label>Faixa de aviso no topo do site (opcional)</label><input type="text" id="loja-aviso" maxlength="140" placeholder="Ex: 🚚 Entrega grátis em Taguatinga · Parcelamos no cartão"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Formas de pagamento</label><input type="text" id="loja-pagamento" maxlength="140"></div>
+                    <div class="form-group"><label>Entrega</label><input type="text" id="loja-entrega" maxlength="140"></div>
+                </div>
+                <div class="form-group">
+                    <label>Produtos esgotados</label>
+                    <select id="loja-mostrar-esgotados">
+                        <option value="sim">Mostrar com botão "Encomendar" (recomendado)</option>
+                        <option value="nao">Esconder do site</option>
+                    </select>
+                </div>
+                <div class="modal-actions" style="justify-content:flex-start">
+                    <button type="submit" class="btn-green" id="loja-salvar">Salvar configurações</button>
+                    <span id="loja-salvo" class="caixa-saldo-info"></span>
+                </div>
+            </form>
         </div>
 
         <!-- Contas a Pagar -->
@@ -338,6 +413,25 @@
                 <div class="form-group"><label>Custo do Produto (Quanto você pagou?)</label><input type="number" id="prod-custo" step="0.01" required placeholder="Ex: 50.00"></div>
                 <div class="form-group"><label>Preço de Venda Final (R$)</label><input type="number" id="prod-preco" step="0.01" required placeholder="Ex: 120.00"></div>
                 <div class="form-group"><label id="prod-qtd-label">Quantidade Inicial no Estoque</label><input type="number" id="prod-qtd" min="0" required placeholder="Ex: 10"></div>
+
+                <fieldset class="bloco-loja">
+                    <legend>🛍️ Na loja online</legend>
+                    <label class="check"><input type="checkbox" id="prod-na-loja" checked> Mostrar este produto no site</label>
+                    <div class="foto-produto">
+                        <div class="foto-preview" id="prod-foto-preview"><span>Sem foto</span></div>
+                        <div class="foto-acoes">
+                            <label class="btn-gray foto-botao">📷 Escolher foto
+                                <input type="file" id="prod-foto" accept="image/*" hidden onchange="escolherFotoProduto(event)">
+                            </label>
+                            <button type="button" class="btn-excluir" id="prod-foto-remover" onclick="removerFotoProduto()" hidden>Remover foto</button>
+                            <small>Foto com fundo claro vende mais. Ela é reduzida automaticamente.</small>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Categoria</label><input type="text" id="prod-categoria" list="lista-categorias" maxlength="60" placeholder="Ex: Fones, Carregadores, Cabos"><datalist id="lista-categorias"></datalist></div>
+                    <div class="form-group"><label>Descrição para o cliente</label><textarea id="prod-descricao" rows="4" maxlength="2000" placeholder="Ex: Cancelamento de ruído ativo, até 30h de bateria, Bluetooth 5.3. Acompanha cabo USB-C."></textarea></div>
+                    <div class="form-group"><label>Preço "de" (promoção, opcional)</label><input type="number" id="prod-preco-antigo" step="0.01" min="0" placeholder="Ex: 249.00 — aparece riscado ao lado do preço"></div>
+                    <label class="check"><input type="checkbox" id="prod-destaque"> Destacar no topo do site</label>
+                </fieldset>
                 <div class="modal-actions">
                     <button type="button" class="btn-gray" onclick="fecharModal('modal-produto')">Cancelar</button>
                     <button type="submit" class="btn-blue" id="prod-salvar">Salvar Produto</button>
@@ -440,6 +534,7 @@
     <script src="/js/contas-pagar.js"></script>
     <script src="/js/movimentos.js"></script>
     <script src="/js/historico.js"></script>
+    <script src="/js/loja-admin.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/tema.js"></script>
 </body>

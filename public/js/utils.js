@@ -8,6 +8,11 @@ async function fetchJSON(url, options = {}) {
         headers: { 'Content-Type': 'application/json' },
         ...options
     });
+    // Sessão expirou (ou senha trocada): recarrega e o painel mostra o login
+    if (res.status === 401) {
+        location.reload();
+        throw new Error('Sessão expirada. Faça login de novo.');
+    }
     if (!res.ok) {
         // Mostra a mensagem do servidor (ex.: "só há 3 no estoque") quando houver
         let msg = `HTTP ${res.status}`;

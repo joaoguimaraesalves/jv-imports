@@ -14,6 +14,7 @@ function mudarTela(nomeTela) {
     if (nomeTela === 'contas-pagar') carregarContasPagar();
     if (nomeTela === 'movimentos')   carregarMovimentos();
     if (nomeTela === 'historico')    carregarHistorico();
+    if (nomeTela === 'loja')         carregarLojaAdmin();
 }
 
 // Menu lateral no celular (gaveta)
@@ -22,4 +23,11 @@ function fecharMenu() { document.body.classList.remove('menu-aberto'); }
 
 // Inicialização
 atualizarDashboardCompleto();
+// Botões "Ver a loja": apontam para o endereço público. No Apps Script, sem endereço
+// configurado, ficam escondidos (o "/" ali seria uma página interna do Google).
+fetchJSON('/api/publicacao').then((s) => {
+    document.querySelectorAll('[data-link-loja]').forEach((el) => {
+        if (s.site) { el.href = s.site; el.hidden = false; } else if (s.permite_configurar) el.hidden = true;
+    });
+}).catch(() => {});
 carregarParaDropdown();

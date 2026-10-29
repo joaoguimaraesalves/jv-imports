@@ -1,0 +1,64 @@
+<!-- views/entrar.html (login do painel) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>JV Imports - Entrar</title>
+    <link rel="icon" href="/loja/icone-192.png">
+    <link rel="stylesheet" href="/css/style.css">
+    <script>
+        (function () {
+            var tema = 'dark';
+            try { tema = localStorage.getItem('jv-tema') || 'dark'; } catch (e) {}
+            document.documentElement.setAttribute('data-theme', tema);
+        })();
+    </script>
+    <style>
+        body { align-items: center; justify-content: center; padding: 16px; height: 100dvh; }
+        .login { width: 360px; max-width: 100%; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 28px; }
+        .login img { width: 72px; height: 72px; border-radius: 50%; display: block; margin: 0 auto 12px; }
+        .login h1 { text-align: center; font-size: 1.3rem; margin-bottom: 4px; }
+        .login p.sub { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
+        .login button { width: 100%; padding: 12px; font-size: 1rem; }
+        .login .erro { color: var(--color-red); font-size: 0.9rem; min-height: 1.3em; margin: 6px 0 12px; }
+        .login .voltar { display: block; text-align: center; margin-top: 16px; color: var(--text-muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <form class="login" onsubmit="entrar(event)">
+        <img src="/loja/icone-192.png" alt="">
+        <h1>Painel JV Imports</h1>
+        <p class="sub">Área restrita do lojista</p>
+        <div class="form-group">
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" autocomplete="current-password" required autofocus>
+        </div>
+        <div class="erro" id="erro" role="alert"></div>
+        <button type="submit" class="btn-green" id="btn">Entrar</button>
+        <a class="voltar" href="/">← Ir para a loja</a>
+    </form>
+    <script>
+        async function entrar(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn');
+            const erro = document.getElementById('erro');
+            btn.disabled = true; btn.textContent = 'Entrando...'; erro.textContent = '';
+            try {
+                const res = await fetch('/api/sessao/entrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senha: document.getElementById('senha').value })
+                });
+                if (res.ok) return location.reload();
+                const corpo = await res.json().catch(() => ({}));
+                erro.textContent = corpo.error || 'Não foi possível entrar';
+            } catch (err) {
+                erro.textContent = 'Sem conexão com o servidor. Tente de novo.';
+            }
+            btn.disabled = false; btn.textContent = 'Entrar';
+        }
+    </script>
+</body>
+</html>

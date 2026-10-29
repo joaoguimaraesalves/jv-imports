@@ -1,0 +1,172 @@
+<!-- views/loja.html — loja online (servida em / e /p/:id pelo routes/loja.js) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>__OG_TITULO__</title>
+    <meta name="description" content="__OG_DESCRICAO__">
+    <meta name="theme-color" content="#07090d">
+    <link rel="canonical" href="__OG_URL__">
+
+    <!-- Prévia do link no WhatsApp / Instagram / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="JV Imports">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:title" content="__OG_TITULO__">
+    <meta property="og:description" content="__OG_DESCRICAO__">
+    <meta property="og:image" content="__OG_IMAGEM__">
+    <meta property="og:url" content="__OG_URL__">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="/loja/icone-192.png">
+    <link rel="apple-touch-icon" href="/loja/icone-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/loja/loja.css">
+</head>
+<body data-produto-inicial="__PRODUTO_INICIAL__">
+    <a class="pular" href="#produtos">Pular para os produtos</a>
+
+    <div class="aviso" id="aviso" hidden></div>
+
+    <header class="topo">
+        <a class="marca" href="/" aria-label="JV Imports — início">
+            <img src="/loja/logo-96.png" alt="" width="40" height="40">
+            <span>JV <b>IMPORTS</b></span>
+        </a>
+        <button class="btn-sacola" id="btn-sacola" type="button" aria-label="Abrir sacola">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13H7L6 7Zm3 0V6a3 3 0 0 1 6 0v1"/></svg>
+            <span>Sacola</span>
+            <span class="contador" id="sacola-contador" hidden>0</span>
+        </button>
+    </header>
+
+    <main>
+        <section class="hero">
+            <p class="ao-vivo"><span class="pulso" aria-hidden="true"></span> Estoque atualizado em tempo real</p>
+            <h1>Tecnologia importada,<br><span class="brilho">preço justo.</span></h1>
+            <p class="hero-sub">Fones, carregadores e acessórios com pronta entrega. Escolha aqui e finalize pelo WhatsApp em menos de 1 minuto.</p>
+            <div class="hero-acoes">
+                <a href="#produtos" class="btn btn-primario">Ver produtos</a>
+                <button type="button" class="btn btn-whats-contorno" data-whats-geral>
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+                    Falar no WhatsApp
+                </button>
+            </div>
+            <ul class="selos">
+                <li><span aria-hidden="true">⚡</span> Pronta entrega</li>
+                <li><span aria-hidden="true">💬</span> Atendimento direto pelo WhatsApp</li>
+                <li><span aria-hidden="true">✅</span> Estoque real: o que aparece aqui, tem</li>
+            </ul>
+        </section>
+
+        <section id="produtos" class="produtos" aria-labelledby="titulo-produtos">
+            <div class="produtos-topo">
+                <h2 id="titulo-produtos">Produtos</h2>
+                <p class="atualizado" id="atualizado" aria-live="polite"></p>
+            </div>
+            <div class="filtros">
+                <label class="busca">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
+                    <input type="search" id="busca" placeholder="Buscar fone, carregador, cabo..." aria-label="Buscar produto" autocomplete="off">
+                </label>
+                <div class="chips" id="chips" role="tablist" aria-label="Filtrar por categoria"></div>
+            </div>
+            <div class="grade" id="grade" aria-busy="true">
+                <div class="card esqueleto"></div><div class="card esqueleto"></div>
+                <div class="card esqueleto"></div><div class="card esqueleto"></div>
+            </div>
+            <div class="vazio" id="vazio" hidden>
+                <p>Nenhum produto encontrado.</p>
+                <button type="button" class="btn btn-secundario" data-whats-geral>Procurando algo? Fale com a gente</button>
+            </div>
+            <div class="vazio" id="erro" hidden>
+                <p>Não conseguimos carregar os produtos agora.</p>
+                <button type="button" class="btn btn-secundario" id="tentar-de-novo">Tentar de novo</button>
+            </div>
+        </section>
+
+        <section class="como" aria-labelledby="titulo-como">
+            <h2 id="titulo-como">Como comprar</h2>
+            <ol class="passos">
+                <li><span class="num">1</span><div><h3>Escolha</h3><p>Adicione os produtos na sacola. O estoque do site é o mesmo da loja.</p></div></li>
+                <li><span class="num">2</span><div><h3>Envie pelo WhatsApp</h3><p>A sacola vira uma mensagem pronta. É só tocar em enviar.</p></div></li>
+                <li><span class="num">3</span><div><h3>Pague e receba</h3><p><span id="txt-pagamento">Pix, cartão de crédito ou dinheiro</span>. <span id="txt-entrega">Entrega combinada pelo WhatsApp ou retirada</span>.</p></div></li>
+            </ol>
+        </section>
+    </main>
+
+    <footer class="rodape">
+        <div class="rodape-marca">
+            <img src="/loja/logo-96.png" alt="" width="48" height="48">
+            <div>
+                <strong>JV Imports</strong>
+                <p>Tecnologia importada com preço justo.</p>
+            </div>
+        </div>
+        <div class="rodape-links">
+            <button type="button" class="link" data-whats-geral>WhatsApp</button>
+            <a class="link" id="link-instagram" href="#" target="_blank" rel="noopener" hidden>Instagram</a>
+        </div>
+        <p class="rodape-fino">© <span id="ano"></span> JV Imports · Preços e estoque atualizados automaticamente.</p>
+    </footer>
+
+    <button type="button" class="whats-flutuante" data-whats-geral aria-label="Falar no WhatsApp">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+    </button>
+
+    <!-- Detalhe do produto -->
+    <dialog id="dlg-produto" class="dlg-produto" aria-labelledby="dp-nome">
+        <button type="button" class="fechar" data-fechar aria-label="Fechar">×</button>
+        <div class="dp-foto" id="dp-foto"></div>
+        <div class="dp-info">
+            <p class="dp-cat" id="dp-cat"></p>
+            <h2 id="dp-nome"></h2>
+            <div class="preco" id="dp-preco"></div>
+            <p class="estoque" id="dp-estoque"></p>
+            <p class="dp-desc" id="dp-desc"></p>
+            <div class="dp-compra" id="dp-compra">
+                <div class="qtd" role="group" aria-label="Quantidade">
+                    <button type="button" id="dp-menos" aria-label="Diminuir">−</button>
+                    <output id="dp-qtd">1</output>
+                    <button type="button" id="dp-mais" aria-label="Aumentar">+</button>
+                </div>
+                <button type="button" class="btn btn-primario" id="dp-add">Adicionar à sacola</button>
+            </div>
+            <button type="button" class="btn btn-whats" id="dp-whats">Comprar agora pelo WhatsApp</button>
+            <button type="button" class="btn-texto" id="dp-compartilhar">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14"/></svg>
+                Compartilhar produto
+            </button>
+        </div>
+    </dialog>
+
+    <!-- Sacola -->
+    <dialog id="dlg-sacola" class="dlg-sacola" aria-labelledby="sacola-titulo">
+        <div class="sacola-topo">
+            <h2 id="sacola-titulo">Sua sacola</h2>
+            <button type="button" class="fechar" data-fechar aria-label="Fechar">×</button>
+        </div>
+        <ul class="sacola-itens" id="sacola-itens"></ul>
+        <div class="sacola-vazia" id="sacola-vazia">
+            <p>Sua sacola está vazia.</p>
+            <button type="button" class="btn btn-secundario" data-fechar>Ver produtos</button>
+        </div>
+        <div class="sacola-rodape" id="sacola-rodape">
+            <div class="sacola-total"><span>Total</span><strong id="sacola-total">R$ 0,00</strong></div>
+            <label class="campo">
+                <span>Seu nome (opcional)</span>
+                <input type="text" id="sacola-nome" autocomplete="given-name" maxlength="60" placeholder="Para a gente te chamar pelo nome">
+            </label>
+            <button type="button" class="btn btn-whats" id="sacola-finalizar">Finalizar pelo WhatsApp</button>
+            <p class="sacola-nota">Nada é cobrado aqui. Você confirma pagamento e entrega na conversa.</p>
+        </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="/loja/loja.js"></script>
+</body>
+</html>

@@ -89,6 +89,24 @@ async function initDb(pool) {
       data TEXT NOT NULL,
       dados JSONB NOT NULL
     );
+
+    -- Loja online (site público): dados de vitrine do produto.
+    -- na_loja = aparece no site; destaque = vai para o topo;
+    -- preco_antigo = preço "de" para mostrar promoção (de/por).
+    ALTER TABLE produtos ADD COLUMN IF NOT EXISTS descricao TEXT;
+    ALTER TABLE produtos ADD COLUMN IF NOT EXISTS categoria TEXT;
+    ALTER TABLE produtos ADD COLUMN IF NOT EXISTS na_loja BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE produtos ADD COLUMN IF NOT EXISTS destaque BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_antigo NUMERIC;
+
+    -- Foto do produto guardada no próprio banco (o disco do Render grátis é
+    -- apagado a cada deploy). O painel reduz a imagem antes de enviar (~100 KB).
+    CREATE TABLE IF NOT EXISTS produto_fotos (
+      produto_id INTEGER PRIMARY KEY REFERENCES produtos(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      dados BYTEA NOT NULL,
+      atualizado_em TEXT NOT NULL
+    );
   `);
 
   console.log('Banco de dados da JV Imports (Postgres/Neon) conectado!');

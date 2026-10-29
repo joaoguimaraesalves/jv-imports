@@ -6,4 +6,7 @@ sistema.sqlite-wal
 sistema.sqlite-shm
 .env
 .DS_Store
-Thumbs.db
+Thumbs.dbcloudflare/dist/
+.wrangler/
+cloudflare/.wrangler/
+apps-script/dist/

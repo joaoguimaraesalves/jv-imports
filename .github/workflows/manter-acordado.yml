@@ -1,0 +1,23 @@
+# Mantém o painel (Render) acordado.
+# O plano grátis do Render "dorme" após 15 min sem visitas e o próximo acesso
+# espera ~50 s. A loja não depende disso (está na Cloudflare), mas o painel
+# abre rápido e as publicações saem na hora. A rota visitada não consulta o
+# banco, então não gasta as horas grátis do Neon.
+# Outro endereço do Render? Crie a variável de repositório RENDER_URL em
+# Settings → Secrets and variables → Actions → Variables.
+name: Manter painel acordado
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Visita o Render
+        run: |
+          URL="${{ vars.RENDER_URL || 'https://jv-imports-1.onrender.com' }}"
+          curl -fsS --retry 3 --retry-delay 20 --max-time 90 "$URL/api/loja/saude"
