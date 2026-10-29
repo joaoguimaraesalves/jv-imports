@@ -266,6 +266,15 @@ function salvarEstadoLoja_(estado) {
   PropertiesService.getScriptProperties().setProperty(PROP_ESTADO_LOJA, JSON.stringify(estado));
 }
 
+/**
+ * Rode uma vez pelo editor se aparecer "Você não tem permissão para chamar UrlFetchApp.fetch":
+ * faz o Google pedir de novo todas as permissões (inclusive a conexão com a Cloudflare).
+ */
+function autorizarLoja() {
+  ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
+  Logger.log('Permissões ok: ' + publicarLojaAgora());
+}
+
 /** Chamada pela tela depois de cada gravação (em segundo plano, não trava o painel). */
 function publicarLojaAgora() {
   return JSON.stringify(publicarLoja_({}));
