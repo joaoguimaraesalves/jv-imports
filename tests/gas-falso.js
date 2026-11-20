@@ -93,6 +93,8 @@ function criarAmbiente(opcoes = {}) {
     chamadasKv: [],
     falharKv: null,        // { status, mensagem } para simular erro
     agora: null,           // número fixo para Date.now (opcional)
+    // Nuvemshop falsa: produtos/variantes e pedidos como a API devolve
+    ns: { produtos: [], pedidos: [], chamadas: [], versao: '2025-03', codigo: 'codigo-ok', falhar: null },
   };
   let seq = 0;
 
@@ -138,6 +140,53 @@ function criarAmbiente(opcoes = {}) {
     }
     if (metodo === 'delete') estado.kv.delete(chave);
     return json(200, { success: true });
+  }
+
+  // Imitação da API da Nuvemshop (autorização + /store, /products, /orders, variantes)
+  function respostaNs(url, opts) {
+    const metodo = (opts.method || 'get').toLowerCase();
+    const json = (codigo, obj) => ({ getResponseCode: () => codigo, getContentText: () => (obj === undefined ? '' : JSON.stringify(obj)) });
+    const ns = estado.ns;
+    if (url === 'https://www.tiendanube.com/apps/authorize/token') {
+      const b = JSON.parse(opts.payload);
+      ns.chamadas.push({ metodo, caminho: 'token', corpo: b });
+      if (b.code !== ns.codigo || !b.client_secret) return json(400, { error: 'invalid_grant', error_description: 'code inválido' });
+      return json(200, { access_token: 'tok-ns', token_type: 'bearer', scope: 'read_orders,write_products', user_id: 999 });
+    }
+    const u = new URL(url);
+    const m = u.pathname.match(/^\/([^/]+)\/999(\/.*)$/);
+    const auth = opts.headers && opts.headers.Authorization;
+    const corpo = opts.payload ? JSON.parse(opts.payload) : undefined;
+    ns.chamadas.push({ metodo, caminho: m ? m[2] : u.pathname, query: Object.fromEntries(u.searchParams), corpo, auth });
+    if (!m || m[1] !== ns.versao) return json(404, { code: 404, message: 'Not Found' });
+    if (auth !== 'Bearer tok-ns') return json(401, { code: 401, message: 'Unauthorized' });
+    if (ns.falhar) return json(ns.falhar.status, { code: ns.falhar.status, description: ns.falhar.mensagem });
+    const caminho = m[2];
+    const q = u.searchParams;
+    const pagina = Number(q.get('page') || 1);
+    const lista = (itens) => (pagina > 1 || !itens.length ? json(404, { code: 404, description: 'Last page is 0' }) : json(200, itens));
+    if (caminho === '/store') return json(200, { id: 999, name: { pt: 'JV Imports' } });
+    if (caminho === '/products' && metodo === 'get') return lista(ns.produtos);
+    const pv = caminho.match(/^\/products\/(\d+)\/variants\/(\d+)$/);
+    if (pv && metodo === 'put') {
+      const prod = ns.produtos.find((x) => String(x.id) === pv[1]);
+      const v = prod && prod.variants.find((x) => String(x.id) === pv[2]);
+      if (!v) return json(404, { code: 404 });
+      v.stock = corpo.stock;
+      return json(200, v);
+    }
+    const um = caminho.match(/^\/orders\/(\d+)$/);
+    if (um) { const o = ns.pedidos.find((x) => String(x.id) === um[1]); return o ? json(200, o) : json(404, {}); }
+    if (caminho === '/orders' && metodo === 'get') {
+      const filtra = (o) =>
+        (!q.get('updated_at_min') || o.updated_at >= new Date(q.get('updated_at_min')).toISOString()) &&
+        (!q.get('created_at_min') || o.created_at >= new Date(q.get('created_at_min')).toISOString()) &&
+        (!q.get('created_at_max') || o.created_at <= new Date(q.get('created_at_max')).toISOString()) &&
+        (!q.get('status') || q.get('status') === 'any' || o.status === q.get('status')) &&
+        (!q.get('payment_status') || q.get('payment_status') === 'any' || o.payment_status === q.get('payment_status'));
+      return lista(ns.pedidos.filter(filtra));
+    }
+    return json(404, { code: 404 });
   }
 
   const RealDate = Date;
@@ -187,6 +236,8 @@ function criarAmbiente(opcoes = {}) {
       DigestAlgorithm: { SHA_256: 'sha256' },
       Charset: { UTF_8: 'utf8' },
       newBlob: (bytes, tipo, nome) => ({ bytes, tipo, nome }),
+      getUuid: () => 'uuid-' + (++seq),
+      sleep() {},
     },
     DriveApp: {
       getFoldersByName(nome) {
@@ -201,7 +252,7 @@ function criarAmbiente(opcoes = {}) {
         return arquivo(id);
       },
     },
-    UrlFetchApp: { fetch: respostaKv },
+    UrlFetchApp: { fetch: (url, opts) => (/nuvemshop\.com\.br|tiendanube\.com/.test(url) ? respostaNs(url, opts) : respostaKv(url, opts)) },
     ScriptApp: {
       getProjectTriggers: () => estado.gatilhos.map((g) => ({ getHandlerFunction: () => g.funcao })),
       newTrigger: (funcao) => {
@@ -213,10 +264,11 @@ function criarAmbiente(opcoes = {}) {
         };
         return b;
       },
-      deleteTrigger() {},
+      deleteTrigger(t) { const i = estado.gatilhos.findIndex((g) => g.funcao === t.getHandlerFunction()); if (i >= 0) estado.gatilhos.splice(i, 1); },
+      getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/PAINEL/exec' }),
       WeekDay: { MONDAY: 'MONDAY' },
     },
-    HtmlService: {},
+    HtmlService: { createHtmlOutput: (html) => ({ html, setTitle() { return this; } }) },
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);

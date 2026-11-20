@@ -101,6 +101,8 @@ async function carregarLojaAdmin() {
     document.getElementById('loja-url').placeholder = 'Preencha o endereço da loja na conexão com a Cloudflare';
     document.querySelectorAll('[data-link-loja]').forEach((a) => { if (urlLoja) { a.href = urlLoja; a.hidden = false; } else if (publicacao.permite_configurar) a.hidden = true; });
     mostrarPublicacao(publicacao);
+    // Nuvemshop só existe no painel do Apps Script
+    if (publicacao.permite_configurar) carregarNuvemshop();
     produtosCadastro = produtos;
 
     document.getElementById('loja-whatsapp').value = formatarWhatsapp(config.whatsapp);
@@ -169,4 +171,136 @@ async function copiarLinkLoja() {
 async function sairDoPainel() {
     try { await fetch('/api/sessao/sair', { method: 'POST' }); } catch (e) { /* segue */ }
     location.href = '/painel';
+}
+
+/* ============================== Nuvemshop ============================== */
+
+const quandoCurto = (iso) => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+
+async function carregarNuvemshop() {
+    try {
+        mostrarNuvemshop(await fetchJSON('/api/nuvemshop'));
+    } catch (e) {
+        document.getElementById('loja-nuvemshop').hidden = true; // painel sem a integração
+    }
+}
+
+function mostrarNuvemshop(s) {
+    const caixa = document.getElementById('loja-nuvemshop');
+    caixa.hidden = false;
+    const texto = document.getElementById('ns-texto');
+    if (!s.conectado) {
+        texto.textContent = s.app_id
+            ? 'App salvo. Agora toque em "Autorizar na Nuvemshop", entre na loja e aceite. Você volta para uma página do painel confirmando a conexão.'
+            : 'Não conectada: as vendas da Nuvemshop não entram aqui e o estoque de lá não acompanha o daqui.';
+    } else if (s.erro) {
+        texto.textContent = '⚠️ ' + (s.loja || 'Nuvemshop') + ': a última sincronização falhou: ' + s.erro + '. O painel tenta de novo a cada 5 minutos.';
+    } else if (s.antigos.length) {
+        texto.textContent = '⏸️ Conectada a ' + s.loja + '. O envio de estoque está parado até você decidir os pedidos abaixo.';
+    } else {
+        texto.textContent = '✅ Conectada a ' + s.loja + '. ' + s.ligados + ' produto(s) ligado(s). Última sincronização: ' +
+            (quandoCurto(s.ultima) || 'ainda não') + '. Roda a cada 5 minutos e depois de cada venda, compra ou edição aqui.';
+    }
+    document.getElementById('ns-sincronizar').hidden = !s.conectado;
+    document.getElementById('ns-desconectar').hidden = !s.conectado;
+    document.getElementById('ns-form').hidden = false;
+    document.getElementById('ns-redirecionamento').value = s.redirecionamento || '';
+    document.getElementById('ns-app').value = s.app_id || '';
+    document.getElementById('ns-segredo').value = '';
+    document.getElementById('ns-segredo').placeholder = s.tem_segredo ? '•••••• (salvo; deixe em branco para manter)' : 'Cole o Client Secret';
+    document.getElementById('ns-segredo-label').textContent = s.tem_segredo ? 'Client Secret ✓' : 'Client Secret';
+    const autorizar = document.getElementById('ns-autorizar');
+    autorizar.hidden = !s.link_autorizar || s.conectado;
+    if (s.link_autorizar) autorizar.href = s.link_autorizar;
+
+    // Pedidos pagos antes da conexão
+    document.getElementById('ns-antigos').innerHTML = s.antigos.length ? `
+        <div class="caixa-saldo-info" style="margin-top:12px">
+            <strong>${s.antigos.length} pedido(s) pago(s) na Nuvemshop antes da conexão.</strong> Se você ainda não lançou no painel, importe; se já lançou à mão, ignore (para não contar duas vezes).
+            <ul style="margin:8px 0 8px 18px">${s.antigos.map(a => `<li>#${esc(a.numero)} · ${esc(quandoCurto(a.data))} · ${esc(a.cliente)} · ${esc(a.itens)} · ${formatarMoeda(a.total)}</li>`).join('')}</ul>
+            <button class="btn-green" onclick="decidirAntigosNuvemshop('importar')">Importar no painel</button>
+            <button class="btn-gray" onclick="decidirAntigosNuvemshop('ignorar')">Já lancei, ignorar</button>
+        </div>` : '';
+
+    // Produtos sem ligação
+    const opcoes = '<option value="">Escolha o produto da Nuvemshop…</option>' +
+        s.sem_ligacao_ns.map(v => `<option value="${esc(v.variante)}">${esc(v.nome)}</option>`).join('');
+    const avisos = (s.avisos || []).map(a => `<li>${esc(a)}</li>`).join('');
+    document.getElementById('ns-ligacoes').innerHTML = !s.conectado ? '' : `
+        ${avisos ? `<ul class="caixa-saldo-info" style="margin:12px 0 0 18px">${avisos}</ul>` : ''}
+        ${s.sem_ligacao_painel.length ? `<div style="margin-top:12px">
+            <strong>Produtos do painel sem ligação com a Nuvemshop</strong>
+            <p class="caixa-saldo-info">O estoque deles não vai para lá. Escolha o produto correspondente (ou deixe sem, se não vende na Nuvemshop).</p>
+            ${s.sem_ligacao_painel.map(p => `<div class="form-row" style="align-items:center">
+                <div class="form-group" style="margin:4px 0">${esc(p.nome)}</div>
+                <div class="form-group" style="margin:4px 0"><select onchange="ligarProdutoNuvemshop(${Number(p.id)}, this.value)" ${s.sem_ligacao_ns.length ? '' : 'disabled'}>${opcoes}</select></div>
+            </div>`).join('')}
+        </div>` : ''}`;
+
+    document.getElementById('ns-ultimos').innerHTML = s.conectado && s.ultimos_importados.length ? `
+        <div style="margin-top:12px"><strong>Últimos pedidos importados</strong>
+        <ul class="caixa-saldo-info" style="margin:6px 0 0 18px">${s.ultimos_importados.map(i => `<li>#${esc(i.numero)} · ${esc(quandoCurto(i.data))} · ${esc(i.cliente)} · ${formatarMoeda(i.total)}</li>`).join('')}</ul></div>` : '';
+}
+
+async function salvarConexaoNuvemshop(event) {
+    event.preventDefault();
+    const botao = document.getElementById('ns-salvar');
+    botao.disabled = true;
+    try {
+        mostrarNuvemshop(await fetchJSON('/api/nuvemshop/config', {
+            method: 'PUT',
+            body: JSON.stringify({ app_id: document.getElementById('ns-app').value, client_secret: document.getElementById('ns-segredo').value })
+        }));
+    } catch (e) {
+        alert('Não foi possível salvar: ' + e.message);
+    } finally {
+        botao.disabled = false;
+    }
+}
+
+async function sincronizarNuvemshopTela() {
+    const botao = document.getElementById('ns-sincronizar');
+    botao.disabled = true;
+    botao.textContent = 'Sincronizando...';
+    try {
+        const s = await fetchJSON('/api/nuvemshop/sincronizar', { method: 'POST' });
+        mostrarNuvemshop(s);
+        if (s.resultado && s.resultado.importados) carregarDashboard();
+    } catch (e) {
+        alert('Não foi possível sincronizar: ' + e.message);
+    } finally {
+        botao.disabled = false;
+        botao.textContent = '↻ Sincronizar agora';
+    }
+}
+
+async function ligarProdutoNuvemshop(produtoId, variante) {
+    if (!variante) return;
+    try {
+        mostrarNuvemshop(await fetchJSON('/api/nuvemshop/ligar', { method: 'PUT', body: JSON.stringify({ produto_id: produtoId, ns_variante_id: variante }) }));
+    } catch (e) {
+        alert('Não foi possível ligar: ' + e.message);
+    }
+}
+
+async function decidirAntigosNuvemshop(acao) {
+    const pergunta = acao === 'importar'
+        ? 'Importar esses pedidos como vendas no painel? O estoque daqui será baixado.'
+        : 'Confirmar que esses pedidos já estão lançados no painel? Eles não serão importados.';
+    if (!confirm(pergunta)) return;
+    try {
+        mostrarNuvemshop(await fetchJSON('/api/nuvemshop/antigos', { method: 'POST', body: JSON.stringify({ acao }) }));
+        carregarDashboard();
+    } catch (e) {
+        alert('Não foi possível concluir: ' + e.message);
+    }
+}
+
+async function desconectarNuvemshop() {
+    if (!confirm('Desconectar a Nuvemshop? As vendas de lá param de entrar aqui e o estoque de lá para de ser atualizado.')) return;
+    try {
+        mostrarNuvemshop(await fetchJSON('/api/nuvemshop', { method: 'DELETE' }));
+    } catch (e) {
+        alert('Não foi possível desconectar: ' + e.message);
+    }
 }

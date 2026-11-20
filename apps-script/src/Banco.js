@@ -19,6 +19,8 @@ const ESQUEMA = {
     id: 'int', nome: 'text', custo: 'num', preco: 'num', quantidade: 'int',
     descricao: 'text', categoria: 'text', na_loja: 'bool', destaque: 'bool', preco_antigo: 'num',
     foto_id: 'text', foto_em: 'text',
+    // Nuvemshop: produto e variante de lá ligados a este (Nuvemshop.js)
+    ns_produto_id: 'text', ns_variante_id: 'text',
   },
   vendas: {
     id: 'int', produto_id: 'int', produto_nome: 'text', quantidade: 'int', valor: 'num', custo: 'num',
@@ -27,6 +29,8 @@ const ESQUEMA = {
     // canal: onde vendeu (OLX, Instagram...). taxa: o que a maquininha cobrou (R$).
     // gastos_extras: motoboy, embalagem etc. (R$). Os dois saem do lucro e do caixa.
     canal: 'text', taxa: 'num', gastos_extras: 'num',
+    // origem: venda importada de fora ("ns:<pedido>:<variante>" = Nuvemshop); vazio = lançada no painel
+    origem: 'text',
   },
   compras: {
     id: 'int', descricao: 'text', valor_total: 'num', forma_pagamento: 'text', parcelas: 'int',

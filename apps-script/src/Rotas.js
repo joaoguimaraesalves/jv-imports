@@ -61,6 +61,13 @@ const ROTAS = [
   ['GET', /^publicacao$/, doArquivoLoja_('publicacaoSituacao_'), SEM_TRANSACAO],
   ['POST', /^publicacao\/agora$/, doArquivoLoja_('publicacaoAgora_'), SEM_TRANSACAO],
   ['PUT', /^publicacao\/config$/, doArquivoLoja_('publicacaoConfigSalvar_'), SEM_TRANSACAO],
+  // Nuvemshop (Nuvemshop.js): falam com a API de lá, então cuidam da própria trava
+  ['GET', /^nuvemshop$/, doArquivoLoja_('nuvemshopSituacao_'), SEM_TRANSACAO],
+  ['PUT', /^nuvemshop\/config$/, doArquivoLoja_('nuvemshopConfigSalvar_'), SEM_TRANSACAO],
+  ['POST', /^nuvemshop\/sincronizar$/, doArquivoLoja_('nuvemshopSincronizar_'), SEM_TRANSACAO],
+  ['PUT', /^nuvemshop\/ligar$/, doArquivoLoja_('nuvemshopLigar_'), SEM_TRANSACAO],
+  ['POST', /^nuvemshop\/antigos$/, doArquivoLoja_('nuvemshopAntigos_'), SEM_TRANSACAO],
+  ['DELETE', /^nuvemshop$/, doArquivoLoja_('nuvemshopDesconectar_'), SEM_TRANSACAO],
 
   ['GET', /^vendas$/, vendasListar_],
   ['POST', /^vendas$/, vendasCriar_],
@@ -159,7 +166,7 @@ function dashboardResumo_(tx, req) {
   });
 }
 
-const CANAIS_VENDA = ['OLX', 'Facebook', 'Instagram', 'WhatsApp', 'Loja online', 'Presencial', 'Indicação', 'Outro'];
+const CANAIS_VENDA = ['OLX', 'Facebook', 'Instagram', 'WhatsApp', 'Loja online', 'Nuvemshop', 'Presencial', 'Indicação', 'Outro'];
 
 /** Vendas por canal e por forma de pagamento no período. */
 function dashboardCanais_(tx, req) {

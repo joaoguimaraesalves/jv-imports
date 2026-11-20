@@ -21,6 +21,11 @@ function publicarLojaEmSegundoPlano() {
         .withSuccessHandler(() => {})
         .withFailureHandler(() => {}) // a tela "Loja Online" mostra se a última publicação falhou
         .publicarLojaAgora();
+    // Nuvemshop: envia o estoque novo e traz pedidos pagos (não faz nada se não estiver conectada)
+    google.script.run
+        .withSuccessHandler(() => {})
+        .withFailureHandler(() => {})
+        .sincronizarNuvemshopAgora();
 }
 
 function fetchJSON(url, options = {}) {
@@ -39,7 +44,7 @@ function fetchJSON(url, options = {}) {
         google.script.run
             .withSuccessHandler(texto => {
                 fim();
-                if (grava && !url.startsWith('/api/publicacao')) publicarLojaEmSegundoPlano();
+                if (grava && !url.startsWith('/api/publicacao') && !url.startsWith('/api/nuvemshop')) publicarLojaEmSegundoPlano();
                 resolve(JSON.parse(texto));
             })
             .withFailureHandler(e => {

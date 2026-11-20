@@ -121,6 +121,29 @@ Domínio próprio: compre no Registro.br, mude os servidores DNS para os da
 Cloudflare (Add a site, plano Free) e adicione o domínio em **Pages → Custom
 domains**. Depois troque o endereço da loja no painel.
 
+## 🛒 Nuvemshop (vendas e estoque ligados ao painel)
+
+Só no painel do Apps Script (`apps-script/src/Nuvemshop.js`). A cada 5 minutos, e logo depois de cada gravação no painel:
+
+- **Pedido pago na Nuvemshop vira venda no painel:** canal "Nuvemshop", uma linha por item, cupom rateado, frete fora. O estoque daqui é baixado e o pedido nunca entra duas vezes. Se o pedido for cancelado ou estornado depois, as vendas dele saem e o estoque volta.
+- **O estoque do painel vai para a Nuvemshop:** o painel continua mandando. O valor enviado é o estoque daqui menos os itens de pedidos que ainda esperam pagamento, porque esses a Nuvemshop já separou.
+- **Ligação dos produtos:** é feita sozinha pelo nome igual ou pelo SKU igual ao id do painel (`3` ou `JV-3`). O que sobrar aparece na tela **Loja Online** para escolher.
+- **Taxas:** a taxa do meio de pagamento da Nuvemshop não é descontada da venda importada (fica 0).
+
+### 🔑 Ligar a Nuvemshop (uma vez só)
+
+O plano grátis da Nuvemshop não tem "Aplicativos sob medida", então a conexão usa um app gratuito do Portal de Parceiros.
+
+1. Crie a conta em **partners.nuvemshop.com.br** e depois um aplicativo.
+2. No app, preencha:
+   - **URL de redirecionamento:** o link `/exec` do painel. Ele aparece na tela Loja Online, no cartão Nuvemshop.
+   - **Permissões:** *Produtos: ler e escrever* e *Pedidos: ler*.
+3. No painel, na tela **Loja Online**, cartão **Nuvemshop**, cole o **App ID** e o **Client Secret** do app e clique em **Salvar**.
+4. Clique em **Autorizar na Nuvemshop ↗**, entre na loja e aceite.
+   - Faça isso no navegador logado na conta Google dona do painel.
+   - Você volta para uma página do painel dizendo "Nuvemshop conectada".
+5. Se houver pedidos pagos antes da conexão, o envio de estoque fica parado até você escolher **Importar no painel** ou **Já lancei, ignorar**.
+
 ## 🔒 Acesso ao painel (versão Node)
 
 O painel do Apps Script só abre para a conta Google dona do projeto. Na versão

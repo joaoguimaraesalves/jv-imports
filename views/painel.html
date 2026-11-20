@@ -286,6 +286,35 @@
                 </div>
             </form>
 
+            <!-- Nuvemshop: só no painel do Apps Script (Nuvemshop.js) -->
+            <div class="chart-container" id="loja-nuvemshop" hidden>
+                <div class="loja-publicacao" style="padding:0;margin:0;box-shadow:none;background:none">
+                    <div>
+                        <strong>Nuvemshop</strong>
+                        <p class="caixa-saldo-info" id="ns-texto">Verificando...</p>
+                    </div>
+                    <button class="btn-gray" id="ns-sincronizar" onclick="sincronizarNuvemshopTela()" hidden>↻ Sincronizar agora</button>
+                </div>
+                <div id="ns-antigos"></div>
+                <div id="ns-ligacoes"></div>
+                <div id="ns-ultimos"></div>
+                <form id="ns-form" onsubmit="salvarConexaoNuvemshop(event)" style="margin-top:12px">
+                    <p class="caixa-saldo-info">Pedido pago na Nuvemshop vira venda aqui e o estoque daqui vai para lá. Passo a passo no README ("Ligar a Nuvemshop"). No app do Portal de Parceiros, a <b>URL de redirecionamento</b> é:</p>
+                    <div class="loja-link-linha" style="margin-bottom:10px">
+                        <input type="text" id="ns-redirecionamento" readonly onclick="this.select()">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>App ID</label><input type="text" id="ns-app" inputmode="numeric" autocomplete="off" placeholder="Número do app"></div>
+                        <div class="form-group"><label id="ns-segredo-label">Client Secret</label><input type="password" id="ns-segredo" autocomplete="new-password" spellcheck="false"></div>
+                    </div>
+                    <div class="modal-actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+                        <button type="submit" class="btn-green" id="ns-salvar">Salvar</button>
+                        <a class="btn-blue" id="ns-autorizar" target="_blank" rel="noopener" style="text-decoration:none" hidden>Autorizar na Nuvemshop ↗</a>
+                        <button type="button" class="btn-gray" id="ns-desconectar" onclick="desconectarNuvemshop()" hidden>Desconectar</button>
+                    </div>
+                </form>
+            </div>
+
             <div class="cards-grid" id="loja-saude"></div>
 
             <form class="chart-container" onsubmit="salvarConfigLoja(event)">
