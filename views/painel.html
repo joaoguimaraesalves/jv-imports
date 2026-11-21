@@ -632,6 +632,17 @@
             <form onsubmit="salvarCompra(event)">
                 <h3>Nova Compra / Entrada de Mercadoria</h3>
 
+                <button type="button" class="btn-gray btn-colar-compra" onclick="alternarColarCompra()">📋 Colar compra</button>
+                <div id="colar-compra-area" class="colar-compra" style="display: none;">
+                    <label>Cole aqui (uma informação por linha)</label>
+                    <textarea id="colar-compra-texto" rows="8" placeholder="Descrição: 17º Importação - AliExpress&#10;Pagamento: cartão&#10;Parcelas: 2&#10;1º vencimento: 20/12/2026&#10;Total pago: 434&#10;3 | QCY HT05 ANC | 118&#10;3 | FONTE CARREGADOR ESSAGER 30W | 17,78&#10;3 | CABO ESSAGER 60W | 8,89"></textarea>
+                    <div class="colar-compra-acoes">
+                        <button type="button" class="btn-blue" onclick="aplicarCompraColada()">Preencher compra</button>
+                        <small>Itens: quantidade, nome e custo unitário (| ; ou tab). Produto que não existir entra como novo.</small>
+                    </div>
+                    <div id="colar-compra-resultado" class="caixa-destaque"></div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label>Tipo</label>
@@ -666,6 +677,10 @@
                     <div class="form-group" id="grupo-parcelas" style="display: none;">
                         <label>Nº de Parcelas</label>
                         <input type="number" id="compra-parcelas" min="1" max="24" value="1">
+                    </div>
+                    <div class="form-group" id="grupo-primeiro-venc" style="display: none;">
+                        <label>1º vencimento (opcional)</label>
+                        <input type="date" id="compra-primeiro-venc" title="Vazio = um mês depois da compra">
                     </div>
                 </div>
 
@@ -739,6 +754,7 @@
     <script src="/js/dashboard.js"></script>
     <script src="/js/produtos.js"></script>
     <script src="/js/vendas.js"></script>
+    <script src="/js/compras-colar.js"></script>
     <script src="/js/compras.js"></script>
     <script src="/js/contas-pagar.js"></script>
     <script src="/js/movimentos.js"></script>

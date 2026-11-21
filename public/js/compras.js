@@ -4,6 +4,7 @@
 // ehNovo é uma flag explícita pra diferenciar "produto novo" de "nenhum selecionado".
 // Antes eu tentava inferir isso dos outros campos e caía num ovo-e-galinha.
 let itensCompra = [];
+let compraTotalPago = null; // "Total pago" do texto colado (corrige centavo de arredondamento)
 
 async function abrirModalCompra() {
     await carregarParaDropdown();
@@ -13,6 +14,11 @@ async function abrirModalCompra() {
     document.getElementById('compra-parcelas').value = 1;
     document.getElementById('compra-tipo').value = 'atual';
     document.getElementById('compra-data').value = '';
+    document.getElementById('compra-primeiro-venc').value = '';
+    document.getElementById('colar-compra-texto').value = '';
+    document.getElementById('colar-compra-resultado').innerHTML = '';
+    document.getElementById('colar-compra-area').style.display = 'none';
+    compraTotalPago = null;
     mudarTipoCompra();
     toggleParcelas();
     adicionarItemCompra();
@@ -22,7 +28,45 @@ async function abrirModalCompra() {
 function toggleParcelas() {
     const pagamento = document.getElementById('compra-pagamento').value;
     const historico = document.getElementById('compra-tipo').value === 'historico';
-    document.getElementById('grupo-parcelas').style.display = pagamento === 'cartao' && !historico ? 'block' : 'none';
+    const mostrar = pagamento === 'cartao' && !historico ? 'block' : 'none';
+    document.getElementById('grupo-parcelas').style.display = mostrar;
+    document.getElementById('grupo-primeiro-venc').style.display = mostrar;
+}
+
+/* ---------- Colar compra (compras-colar.js faz a leitura do texto) ---------- */
+
+function alternarColarCompra() {
+    const area = document.getElementById('colar-compra-area');
+    area.style.display = area.style.display === 'none' ? 'block' : 'none';
+    if (area.style.display === 'block') document.getElementById('colar-compra-texto').focus();
+}
+
+function aplicarCompraColada() {
+    const texto = document.getElementById('colar-compra-texto').value;
+    const r = interpretarCompraColada(texto, produtosEmEstoque);
+    const caixa = document.getElementById('colar-compra-resultado');
+    if (!r.itens.length) {
+        caixa.className = 'caixa-destaque alerta';
+        caixa.innerHTML = 'Não achei nenhum item. Use uma linha por item: <strong>quantidade | nome | custo</strong>.';
+        return;
+    }
+    if (r.descricao) document.getElementById('compra-desc').value = r.descricao;
+    if (r.forma_pagamento) document.getElementById('compra-pagamento').value = r.forma_pagamento;
+    if (r.parcelas) document.getElementById('compra-parcelas').value = r.parcelas;
+    if (r.primeiro_vencimento) document.getElementById('compra-primeiro-venc').value = r.primeiro_vencimento;
+    compraTotalPago = r.total_pago;
+    toggleParcelas();
+    itensCompra = r.itens.map((it) => Object.assign({}, it));
+    renderizarItensCompra();
+
+    const novos = r.itens.filter((it) => it.ehNovo);
+    const soma = r.itens.reduce((s, it) => s + it.quantidade * it.custo_unitario, 0);
+    const linhas = [`<strong>${r.itens.length} ${r.itens.length === 1 ? 'item preenchido' : 'itens preenchidos'}</strong>. Confira abaixo antes de salvar.`];
+    if (novos.length) linhas.push(`Produto novo (não achei no estoque): ${novos.map((n) => `<strong>${n.produto_nome}</strong>`).join(', ')}. Se for um que já existe, escolha na lista.`);
+    if (r.total_pago !== null && Math.abs(r.total_pago - soma) >= 0.005) linhas.push(`Soma dos itens ${formatarMoeda(soma)}; total pago ${formatarMoeda(r.total_pago)} (as parcelas usam o total pago).`);
+    if (r.ignoradas.length) linhas.push(`Linhas que não entendi: ${r.ignoradas.map((l) => `<code>${l.replace(/</g, '&lt;')}</code>`).join(', ')}`);
+    caixa.className = novos.length || r.ignoradas.length ? 'caixa-destaque alerta' : 'caixa-destaque ok';
+    caixa.innerHTML = linhas.join('<br>');
 }
 
 // Compra antiga: pede a data real do pedido; não gera conta a pagar
@@ -137,6 +181,9 @@ async function salvarCompra(event) {
         parcelas:        parseInt(document.getElementById('compra-parcelas').value) || 1,
         historico:       document.getElementById('compra-tipo').value === 'historico',
         data:            document.getElementById('compra-data').value || null,
+        primeiro_vencimento: document.getElementById('compra-pagamento').value === 'cartao'
+            ? (document.getElementById('compra-primeiro-venc').value || null) : null,
+        total_pago:      compraTotalPago,
         itens:           itensValidos.map(it => ({
             produto_id:     it.produto_id || null,
             produto_nome:   it.produto_nome,

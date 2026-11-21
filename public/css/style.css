@@ -609,3 +609,11 @@ a.link-botao { text-decoration: none; display: inline-flex; align-items: center;
 .pesquisa-links { margin-bottom: 12px; font-size: 0.9rem; color: var(--text-muted); }
 .pesquisa-links a { color: var(--color-blue); margin-right: 10px; }
 #modal-pesquisa textarea { width: 100%; resize: vertical; }
+
+/* ===== Colar compra ===== */
+.btn-colar-compra { margin-bottom: 12px; }
+.colar-compra { margin-bottom: 15px; }
+.colar-compra label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 0.9rem; }
+.colar-compra textarea { width: 100%; resize: vertical; font-family: monospace; font-size: 0.85rem; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-main, var(--bg-panel)); color: var(--text-main); }
+.colar-compra-acoes { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.colar-compra-acoes small { color: var(--text-muted); }

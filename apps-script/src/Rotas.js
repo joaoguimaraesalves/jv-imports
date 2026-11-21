@@ -521,7 +521,16 @@ function comprasCriar_(tx, req) {
     return { produto_id: it.produto_id ? int_(it.produto_id) : null, produto_nome: it.produto_nome,
       quantidade: int_(it.quantidade), custo_unitario: num_(it.custo_unitario) };
   });
-  const valorTotal = itens.reduce(function (s, it) { return s + it.quantidade * it.custo_unitario; }, 0);
+  const somaItens = itens.reduce(function (s, it) { return s + it.quantidade * it.custo_unitario; }, 0);
+  // total_pago (opcional): o valor que de fato foi cobrado. Corrige o centavo que sobra quando o
+  // total não se divide certo entre os itens (ex.: R$ 80 por 3 kits). Só aceita diferença pequena.
+  const totalPago = num_(b.total_pago);
+  if (totalPago !== null && Math.abs(totalPago - somaItens) > Math.max(1, somaItens * 0.01)) {
+    throw erro_('O total pago (R$ ' + totalPago.toFixed(2) + ') não bate com a soma dos itens (R$ ' + somaItens.toFixed(2) + ')');
+  }
+  const valorTotal = totalPago !== null ? totalPago : Math.round(somaItens * 100) / 100;
+  // primeiro_vencimento (opcional, AAAA-MM-DD): dia da 1ª parcela; as outras vencem mês a mês a partir dele.
+  const primeiroVenc = /^\d{4}-\d{2}-\d{2}$/.test(String(b.primeiro_vencimento || '')) ? b.primeiro_vencimento : null;
 
   const compra = tx.inserir('compras', {
     descricao: b.descricao || null, valor_total: valorTotal, forma_pagamento: b.forma_pagamento,
@@ -558,7 +567,7 @@ function comprasCriar_(tx, req) {
     for (let i = 1; i <= parcelas; i++) {
       tx.inserir('contas_pagar', {
         descricao: (b.descricao || 'Compra') + ' — parcela ' + i + '/' + parcelas,
-        valor: i === parcelas ? valorUltima : valorParcela, vencimento: calcularVencimento_(dataISO, i),
+        valor: i === parcelas ? valorUltima : valorParcela, vencimento: primeiroVenc ? calcularVencimento_(primeiroVenc + 'T12:00:00.000Z', i - 1) : calcularVencimento_(dataISO, i),
         status: 'pendente', compra_id: compra.id, parcela_num: i, parcela_total: parcelas,
       });
     }
