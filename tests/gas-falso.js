@@ -167,6 +167,8 @@ function criarAmbiente(opcoes = {}) {
     const lista = (itens) => (pagina > 1 || !itens.length ? json(404, { code: 404, description: 'Last page is 0' }) : json(200, itens));
     if (caminho === '/store') return json(200, { id: 999, name: { pt: 'JV Imports' } });
     if (caminho === '/products' && metodo === 'get') return lista(ns.produtos);
+    const umProd = caminho.match(/^\/products\/(\d+)$/);
+    if (umProd && metodo === 'get') { const pr = ns.produtos.find((x) => String(x.id) === umProd[1]); return pr ? json(200, pr) : json(404, {}); }
     const pv = caminho.match(/^\/products\/(\d+)\/variants\/(\d+)$/);
     if (pv && metodo === 'put') {
       const prod = ns.produtos.find((x) => String(x.id) === pv[1]);
@@ -187,6 +189,18 @@ function criarAmbiente(opcoes = {}) {
       return lista(ns.pedidos.filter(filtra));
     }
     return json(404, { code: 404 });
+  }
+
+  // CDN de imagens da Nuvemshop: só existem as URLs em estado.ns.imagens (url → bytes)
+  function respostaImagemNs(url) {
+    estado.ns.chamadas.push({ metodo: 'get', caminho: 'cdn', url });
+    const bytes = (estado.ns.imagens || {})[url];
+    if (!bytes) return { getResponseCode: () => 404, getContentText: () => '' };
+    const blob = { bytes: assinado(bytes), tipo: 'image/jpeg', nome: 'x.jpg' };
+    blob.getContentType = () => blob.tipo;
+    blob.getBytes = () => blob.bytes;
+    blob.setName = (n) => { blob.nome = n; return blob; };
+    return { getResponseCode: () => 200, getContentText: () => '', getBlob: () => blob };
   }
 
   const RealDate = Date;
@@ -252,7 +266,12 @@ function criarAmbiente(opcoes = {}) {
         return arquivo(id);
       },
     },
-    UrlFetchApp: { fetch: (url, opts) => (/nuvemshop\.com\.br|tiendanube\.com/.test(url) ? respostaNs(url, opts) : respostaKv(url, opts)) },
+    UrlFetchApp: {
+      fetch: (url, opts = {}) => {
+        if (/mitiendanube\.com/.test(url)) return respostaImagemNs(url);
+        return /nuvemshop\.com\.br|tiendanube\.com/.test(url) ? respostaNs(url, opts) : respostaKv(url, opts);
+      },
+    },
     ScriptApp: {
       getProjectTriggers: () => estado.gatilhos.map((g) => ({ getHandlerFunction: () => g.funcao })),
       newTrigger: (funcao) => {

@@ -56,6 +56,8 @@ const ROTAS = [
   // porque Loja.js pode carregar depois deste arquivo)
   ['PUT', /^produtos\/(\d+)\/foto$/, doArquivoLoja_('produtosFotoSalvar_')],
   ['DELETE', /^produtos\/(\d+)\/foto$/, doArquivoLoja_('produtosFotoRemover_')],
+  ['POST', /^produtos\/(\d+)\/fotos$/, doArquivoLoja_('produtosFotoExtraAdicionar_')],
+  ['DELETE', /^produtos\/(\d+)\/fotos\/([\w-]+)$/, doArquivoLoja_('produtosFotoExtraRemover_')],
   ['GET', /^loja\/config$/, doArquivoLoja_('lojaConfigLer_')],
   ['PUT', /^loja\/config$/, doArquivoLoja_('lojaConfigSalvar_')],
   ['GET', /^publicacao$/, doArquivoLoja_('publicacaoSituacao_'), SEM_TRANSACAO],
@@ -67,6 +69,7 @@ const ROTAS = [
   ['POST', /^nuvemshop\/sincronizar$/, doArquivoLoja_('nuvemshopSincronizar_'), SEM_TRANSACAO],
   ['PUT', /^nuvemshop\/ligar$/, doArquivoLoja_('nuvemshopLigar_'), SEM_TRANSACAO],
   ['POST', /^nuvemshop\/antigos$/, doArquivoLoja_('nuvemshopAntigos_'), SEM_TRANSACAO],
+  ['POST', /^nuvemshop\/fotos$/, doArquivoLoja_('nuvemshopImportarFotos_'), SEM_TRANSACAO],
   ['DELETE', /^nuvemshop$/, doArquivoLoja_('nuvemshopDesconectar_'), SEM_TRANSACAO],
 
   ['GET', /^vendas$/, vendasListar_],
@@ -312,7 +315,11 @@ function produtosListar_(tx) {
     return String(a.nome).localeCompare(String(b.nome), 'pt-BR');
   }).map(function (p) {
     // Miniatura da foto (pasta do Drive) só para o painel; o site usa a cópia da Cloudflare
-    return Object.assign({}, p, { foto_url: p.foto_id ? 'https://drive.google.com/thumbnail?id=' + p.foto_id + '&sz=w400' : null });
+    const miniatura = function (id) { return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w400'; };
+    return Object.assign({}, p, {
+      foto_url: p.foto_id ? miniatura(p.foto_id) : null,
+      fotos_extras: fotosExtras_(p).map(function (f) { return { id: f.id, url: miniatura(f.id) }; }), // Loja.js
+    });
   });
 }
 
@@ -355,6 +362,7 @@ function produtosExcluir_(tx, req) {
   const id = Number(req.params[0]);
   const produto = tx.porId('produtos', id);
   if (produto && produto.foto_id) apagarFotoDrive_(produto.foto_id); // Loja.js
+  if (produto) fotosExtras_(produto).forEach(function (f) { apagarFotoDrive_(f.id); });
   ['estoque_movimentos', 'compra_itens'].forEach(function (t) {
     tx.linhas(t).forEach(function (l) { if (l.produto_id === id) l.produto_id = null; });
     tx.alterou(t);

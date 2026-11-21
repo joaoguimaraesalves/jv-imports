@@ -21,6 +21,8 @@ const ESQUEMA = {
     foto_id: 'text', foto_em: 'text',
     // Nuvemshop: produto e variante de lá ligados a este (Nuvemshop.js)
     ns_produto_id: 'text', ns_variante_id: 'text',
+    // fotos_extras: galeria do site, além da foto principal: [{ id (Drive), em (versão), ns (imagem da Nuvemshop) }]
+    fotos_extras: 'json',
   },
   vendas: {
     id: 'int', produto_id: 'int', produto_nome: 'text', quantidade: 'int', valor: 'num', custo: 'num',

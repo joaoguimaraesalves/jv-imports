@@ -89,6 +89,7 @@ function abrirModalProduto(produto = null) {
     // foto_url: miniatura do Drive (painel do Apps Script); senão, a rota da versão Node
     mostrarPreviewFoto(!produto ? null : produto.foto_url || (produto.foto_em
         ? `/api/loja/foto/${produto.id}?v=${encodeURIComponent(produto.foto_em)}` : null));
+    mostrarFotosExtras(produto);
 
     // Sugestões de categoria com as que já existem
     const categorias = [...new Set(produtosCadastro.map(p => (p.categoria || '').trim()).filter(Boolean))].sort();
@@ -205,4 +206,54 @@ async function salvarProduto(event) {
     fecharModal('modal-produto');
     carregarProdutos();
     carregarParaDropdown();
+}
+
+/* ---------- Galeria: fotos extras (só no painel do Apps Script, onde o produto traz fotos_extras) ---------- */
+function mostrarFotosExtras(produto) {
+    const bloco = document.getElementById('prod-fotos-extras');
+    if (!bloco) return;
+    const suportado = produto && Array.isArray(produto.fotos_extras);
+    bloco.hidden = !suportado;
+    if (!suportado) return;
+    const extras = produto.fotos_extras;
+    document.getElementById('prod-fotos-extras-grade').innerHTML = extras.map(f => `
+        <div class="foto-extra"><img src="${f.url}" alt="" loading="lazy">
+            <button type="button" title="Remover esta foto" onclick="removerFotoExtra(${Number(produto.id)}, '${String(f.id).replace(/[^\w-]/g, '')}')">×</button></div>`).join('')
+        || '<span class="sem-extras">Nenhuma foto extra ainda.</span>';
+    document.getElementById('prod-fotos-extras-input').value = '';
+    document.getElementById('prod-fotos-extras-aviso').textContent = extras.length >= 8 ? 'Limite de 8 fotos extras atingido.' : '';
+}
+
+async function recarregarProdutoNoModal(id) {
+    await carregarProdutos(); // atualiza a tabela e a lista produtosCadastro
+    const p = produtosCadastro.find(x => x.id === id);
+    if (p) mostrarFotosExtras(p);
+}
+
+async function adicionarFotosExtras(event) {
+    const id = produtoEditandoId;
+    const arquivos = [...event.target.files];
+    if (!id || !arquivos.length) return;
+    const aviso = document.getElementById('prod-fotos-extras-aviso');
+    try {
+        for (let i = 0; i < arquivos.length; i++) {
+            aviso.textContent = `Enviando foto ${i + 1} de ${arquivos.length}...`;
+            const foto = await reduzirImagem(arquivos[i]);
+            await fetchJSON(`/api/produtos/${id}/fotos`, { method: 'POST', body: JSON.stringify({ foto }) });
+        }
+        aviso.textContent = '';
+    } catch (e) {
+        alert('Não foi possível enviar a foto: ' + e.message);
+    }
+    recarregarProdutoNoModal(id);
+}
+
+async function removerFotoExtra(id, fotoId) {
+    if (!confirm('Remover esta foto da galeria?')) return;
+    try {
+        await fetchJSON(`/api/produtos/${id}/fotos/${fotoId}`, { method: 'DELETE' });
+    } catch (e) {
+        return alert('Não foi possível remover: ' + e.message);
+    }
+    recarregarProdutoNoModal(id);
 }

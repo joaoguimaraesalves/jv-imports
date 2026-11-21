@@ -19,6 +19,7 @@
         sacola: lerSacola(),     // [{ id, qtd }]
         abertoId: null,
         qtdModal: 1,
+        fotoIdx: 0,
         carregouUmaVez: false,
     };
 
@@ -221,6 +222,7 @@
         if (!p) return;
         estado.abertoId = id;
         estado.qtdModal = 1;
+        estado.fotoIdx = 0;
         desenharModal();
         const dlg = $('dlg-produto');
         if (!dlg.open) dlg.showModal();
@@ -231,9 +233,7 @@
         const p = estado.porId.get(estado.abertoId);
         if (!p) { $('dlg-produto').close(); return; }
         estado.qtdModal = Math.max(1, Math.min(estado.qtdModal, p.max_compra || 1));
-        $('dp-foto').innerHTML = fotoHtml(p) + selosHtml(p);
-        // Fundo desfocado com a própria foto: sem faixas vazias nas fotos em pé
-        $('dp-foto').style.setProperty('--foto-fundo', p.foto ? `url("${p.foto.replace(/["\\]/g, '')}")` : 'none');
+        desenharGaleria(p);
         $('dp-cat').textContent = [p.categoria, marcaDe(p)].filter(Boolean).join(' · ');
         $('dp-nome').textContent = p.nome;
         $('dp-preco').innerHTML = precoHtml(p).replace(/^<div class="preco">|<\/div>$/g, '');
@@ -248,6 +248,38 @@
         $('dp-menos').disabled = estado.qtdModal <= 1;
         $('dp-mais').disabled = estado.qtdModal >= p.max_compra;
         $('dp-whats').textContent = p.disponivel ? 'Comprar agora pelo WhatsApp' : 'Encomendar pelo WhatsApp';
+    }
+
+    // Galeria: foto principal + extras (p.fotos). Setas, pontinhos e arrastar para o lado no celular.
+    function fotosDe(p) {
+        return Array.isArray(p.fotos) && p.fotos.length ? p.fotos : (p.foto ? [p.foto] : []);
+    }
+
+    function desenharGaleria(p) {
+        const fotos = fotosDe(p);
+        const n = fotos.length;
+        estado.fotoIdx = n ? ((estado.fotoIdx % n) + n) % n : 0;
+        const atual = fotos[estado.fotoIdx];
+        const caixa = $('dp-foto');
+        if (n <= 1) {
+            caixa.innerHTML = fotoHtml(p) + selosHtml(p);
+        } else {
+            caixa.innerHTML = `<img src="${esc(atual)}" alt="${esc(p.nome)} — foto ${estado.fotoIdx + 1} de ${n}" decoding="async">` + selosHtml(p) +
+                `<button type="button" class="dp-seta esq" data-foto="-1" aria-label="Foto anterior">‹</button>` +
+                `<button type="button" class="dp-seta dir" data-foto="1" aria-label="Próxima foto">›</button>` +
+                `<div class="dp-pontos">${fotos.map((_, i) => `<button type="button" data-ir-foto="${i}" class="${i === estado.fotoIdx ? 'ativo' : ''}" aria-label="Foto ${i + 1}"></button>`).join('')}</div>`;
+            // Já baixa as vizinhas para a troca ser instantânea
+            [fotos[(estado.fotoIdx + 1) % n], fotos[(estado.fotoIdx - 1 + n) % n]].forEach((u) => { const img = new Image(); img.src = u; });
+        }
+        // Fundo desfocado com a própria foto: sem faixas vazias nas fotos em pé
+        caixa.style.setProperty('--foto-fundo', atual ? `url("${atual.replace(/["\\]/g, '')}")` : 'none');
+    }
+
+    function mudarFoto(delta, absoluto) {
+        const p = estado.porId.get(estado.abertoId);
+        if (!p) return;
+        estado.fotoIdx = absoluto !== undefined ? absoluto : estado.fotoIdx + delta;
+        desenharGaleria(p);
     }
 
     function fecharProduto() {
@@ -429,6 +461,25 @@
         if (d.remover) return remover(Number(d.remover));
         if (alvo.hasAttribute('data-whats-geral')) return abrirWhats('Olá, JV Imports! Vim pelo site e queria tirar uma dúvida.');
         if (alvo.hasAttribute('data-fechar')) return alvo.closest('dialog').close();
+        if (d.foto) return mudarFoto(Number(d.foto));
+        if (d.irFoto !== undefined) return mudarFoto(0, Number(d.irFoto));
+    });
+
+    // Celular: arrastar a foto para o lado troca de foto
+    (() => {
+        let x0 = null;
+        const caixa = $('dp-foto');
+        caixa.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+        caixa.addEventListener('touchend', (e) => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            x0 = null;
+            if (Math.abs(dx) > 40) mudarFoto(dx < 0 ? 1 : -1);
+        }, { passive: true });
+    })();
+    $('dlg-produto').addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') mudarFoto(1);
+        if (e.key === 'ArrowLeft') mudarFoto(-1);
     });
 
     $('btn-sacola').addEventListener('click', () => { desenharSacola(); $('dlg-sacola').showModal(); });

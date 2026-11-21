@@ -304,6 +304,17 @@ dialog::backdrop { background: rgba(2, 4, 8, 0.72); backdrop-filter: blur(4px); 
 }
 .dp-foto img { position: relative; width: 100%; height: 100%; object-fit: contain; }
 @media (min-width: 760px) { .dp-foto { aspect-ratio: auto; min-height: 420px; } .dp-foto img { position: absolute; inset: 0; } }
+.dp-seta {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 40px; height: 40px; border-radius: 50%;
+    border: 0; background: rgba(5, 7, 11, 0.55); color: #fff; font-size: 26px; line-height: 38px; cursor: pointer;
+    backdrop-filter: blur(6px); transition: background .2s;
+}
+.dp-seta:hover { background: rgba(10, 132, 240, 0.85); }
+.dp-seta.esq { left: 10px; }
+.dp-seta.dir { right: 10px; }
+.dp-pontos { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; display: flex; justify-content: center; gap: 6px; }
+.dp-pontos button { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.45); cursor: pointer; }
+.dp-pontos button.ativo { background: #fff; width: 20px; border-radius: 4px; }
 .dp-info { padding: 22px; display: flex; flex-direction: column; gap: 10px; }
 .dp-cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-3); font-weight: 600; }
 .dp-info h2 { font-family: var(--fonte-titulo); font-size: 1.4rem; line-height: 1.25; padding-right: 36px; }

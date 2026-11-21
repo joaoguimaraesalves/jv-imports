@@ -310,7 +310,8 @@
                     <div class="modal-actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
                         <button type="submit" class="btn-green" id="ns-salvar">Salvar</button>
                         <a class="btn-blue" id="ns-autorizar" target="_blank" rel="noopener" style="text-decoration:none" hidden>Autorizar na Nuvemshop ↗</a>
-                        <button type="button" class="btn-gray" id="ns-desconectar" onclick="desconectarNuvemshop()" hidden>Desconectar</button>
+                        <button type="button" class="btn-gray" id="ns-fotos" onclick="importarFotosNuvemshop()" hidden>🖼️ Trazer fotos da Nuvemshop</button>
+                    <button type="button" class="btn-gray" id="ns-desconectar" onclick="desconectarNuvemshop()" hidden>Desconectar</button>
                     </div>
                 </form>
             </div>
@@ -552,6 +553,14 @@
                             <button type="button" class="btn-excluir" id="prod-foto-remover" onclick="removerFotoProduto()" hidden>Remover foto</button>
                             <small>Foto com fundo claro vende mais. Ela é reduzida automaticamente.</small>
                         </div>
+                    </div>
+                    <div class="fotos-extras" id="prod-fotos-extras" hidden>
+                        <label>Mais fotos (aparecem na galeria do site, até 8)</label>
+                        <div class="fotos-extras-grade" id="prod-fotos-extras-grade"></div>
+                        <label class="btn-gray foto-botao">➕ Adicionar fotos
+                            <input type="file" id="prod-fotos-extras-input" accept="image/*" multiple hidden onchange="adicionarFotosExtras(event)">
+                        </label>
+                        <small id="prod-fotos-extras-aviso"></small>
                     </div>
                     <div class="form-group"><label>Categoria</label><input type="text" id="prod-categoria" list="lista-categorias" maxlength="60" placeholder="Fones, Carregadores e adaptadores, Ferramentas"><datalist id="lista-categorias"></datalist></div>
                     <div class="form-group"><label>Descrição para o cliente</label><textarea id="prod-descricao" rows="4" maxlength="2000" placeholder="Ex: Cancelamento de ruído ativo, até 30h de bateria, Bluetooth 5.3. Acompanha cabo USB-C."></textarea></div>

@@ -544,3 +544,74 @@ function nuvemshopDesconectar_() {
   });
   return nuvemshopSituacao_();
 }
+
+/* ============================== Fotos da Nuvemshop → galeria do site ============================== */
+
+/** Versão reduzida da imagem no CDN da Nuvemshop (…-1024-1024.jpg); se não existir, a original. */
+function nsBaixarImagem_(src) {
+  const url = String(src || '').replace(/^\/\//, 'https://');
+  const reduzida = url.replace(/(-\d+-\d+)?(\.(?:jpe?g|png|webp))(\?.*)?$/i, '-1024-1024$2');
+  const tentativas = reduzida !== url ? [reduzida, url] : [url];
+  for (let i = 0; i < tentativas.length; i++) {
+    const r = UrlFetchApp.fetch(tentativas[i], { muteHttpExceptions: true, followRedirects: true });
+    if (r.getResponseCode() === 200) {
+      const blob = r.getBlob();
+      const tipo = String(blob.getContentType() || '').toLowerCase();
+      if (/^image\/(jpeg|png|webp)$/.test(tipo) && blob.getBytes().length <= 4 * 1024 * 1024) return blob;
+    }
+  }
+  return null;
+}
+
+/**
+ * Traz para o painel as fotos que estão na Nuvemshop e ainda não estão aqui: a 1ª vira a
+ * principal só se o produto não tiver foto; as outras viram fotos extras (sem repetir:
+ * cada extra guarda o id da imagem da Nuvemshop). Depois republica o site.
+ */
+function nuvemshopImportarFotos_() {
+  if (!nsCred_()) throw erro_('Conecte a Nuvemshop primeiro.');
+  const produtos = transacao_(function (tx) {
+    return tx.linhas('produtos').filter(function (p) { return p.ns_produto_id; })
+      .map(function (p) { return { id: p.id, nome: p.nome, ns: p.ns_produto_id, tem_principal: !!p.foto_id, ja: fotosExtras_(p).map(function (f) { return String(f.ns || ''); }), extras: fotosExtras_(p).length }; });
+  }, true);
+
+  const novos = {}; // produto → { principal, extras[] }
+  let importadas = 0;
+  const avisos = [];
+  produtos.forEach(function (p) {
+    const dados = nsApi_('get', '/products/' + encodeURIComponent(p.ns));
+    const imagens = ((dados && dados.images) || []).slice().sort(function (a, b) { return (a.position || 0) - (b.position || 0); });
+    imagens.forEach(function (img, i) {
+      const nsId = String(img.id);
+      const principal = i === 0;
+      if (principal && p.tem_principal) return;
+      if (!principal && p.ja.indexOf(nsId) >= 0) return;
+      if (!principal && p.extras + ((novos[p.id] && novos[p.id].extras.length) || 0) >= FOTOS_EXTRAS_MAX) return;
+      const blob = nsBaixarImagem_(img.src);
+      if (!blob) { avisos.push('"' + p.nome + '": não consegui baixar uma foto da Nuvemshop.'); return; }
+      const extensao = blob.getContentType().split('/')[1].replace('jpeg', 'jpg');
+      const arquivo = pastaFotos_().createFile(blob.setName('produto-' + p.id + '-ns-' + nsId + '.' + extensao));
+      novos[p.id] = novos[p.id] || { principal: null, extras: [] };
+      if (principal) novos[p.id].principal = arquivo.getId();
+      else novos[p.id].extras.push({ id: arquivo.getId(), ns: nsId });
+      importadas++;
+    });
+  });
+
+  if (importadas) {
+    transacao_(function (tx) {
+      Object.keys(novos).forEach(function (id) {
+        const p = tx.porId('produtos', id);
+        if (!p) return;
+        const n = novos[id];
+        if (n.principal && !p.foto_id) { p.foto_id = n.principal; p.foto_em = emUnico_(p); }
+        const extras = fotosExtras_(p);
+        n.extras.forEach(function (e) { p.fotos_extras = extras; extras.push({ id: e.id, em: emUnico_(p), ns: e.ns }); });
+        p.fotos_extras = extras;
+      });
+      tx.alterou('produtos');
+    }, false);
+    publicarLoja_({});
+  }
+  return Object.assign(nuvemshopSituacao_(), { fotos_importadas: importadas, avisos_fotos: avisos });
+}

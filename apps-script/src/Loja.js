@@ -124,10 +124,12 @@ function montarVitrine_(produtos, vendidos, config) {
         max_compra: Math.min(qtd, 10),
         destaque: !!p.destaque,
         mais_vendido: top.indexOf(Number(p.id)) >= 0,
-        foto: p.foto_id && p.foto_em ? '/api/loja/foto/' + p.id + '?v=' + versaoFoto_(p.foto_em) : null,
+        foto: null,
+        fotos: urlsFotos_(p),
       };
     })
     .filter(function (p) { return mostrarEsgotados || p.disponivel; });
+  lista.forEach(function (p) { p.foto = p.fotos[0] || null; });
 
   lista.sort(function (a, b) {
     return (b.disponivel - a.disponivel) || (b.destaque - a.destaque) ||
@@ -155,11 +157,48 @@ function dadosVitrine_(tx) {
   };
 }
 
+/* ---------- galeria: foto principal + fotos extras ---------- */
+
+const FOTOS_EXTRAS_MAX = 8;
+
+function fotosExtras_(p) {
+  const v = p.fotos_extras;
+  return Array.isArray(v) ? v.filter(function (f) { return f && f.id && f.em; }) : [];
+}
+
+/** Todas as fotos do produto, na ordem do site: principal primeiro. */
+function todasFotos_(p) {
+  const lista = p.foto_id && p.foto_em ? [{ id: p.foto_id, em: p.foto_em }] : [];
+  return lista.concat(fotosExtras_(p));
+}
+
+function urlFoto_(id, em) {
+  return '/api/loja/foto/' + id + '?v=' + versaoFoto_(em);
+}
+
+function urlsFotos_(p) {
+  return todasFotos_(p).map(function (f) { return urlFoto_(p.id, f.em); });
+}
+
+/** Carimbo novo e diferente das outras fotos do produto (ele vira a versão/chave no KV). */
+function emUnico_(p) {
+  const usados = todasFotos_(p).map(function (f) { return versaoFoto_(f.em); });
+  let ms = Date.now();
+  while (usados.indexOf(ms) >= 0) ms++;
+  return new Date(ms).toISOString();
+}
+
 /** Fotos que precisam estar na nuvem: só de produtos visíveis no site. */
 function fotosDesejadas_(tx) {
-  return tx.linhas('produtos')
-    .filter(function (p) { return p.na_loja !== false && Number(p.preco) > 0 && p.foto_id && p.foto_em; })
-    .map(function (p) { return { produto_id: p.id, foto_id: p.foto_id, chave: chaveFoto_(p.id, versaoFoto_(p.foto_em)) }; });
+  const lista = [];
+  tx.linhas('produtos')
+    .filter(function (p) { return p.na_loja !== false && Number(p.preco) > 0; })
+    .forEach(function (p) {
+      todasFotos_(p).forEach(function (f) {
+        lista.push({ produto_id: p.id, foto_id: f.id, chave: chaveFoto_(p.id, versaoFoto_(f.em)) });
+      });
+    });
+  return lista;
 }
 
 /* ============================== Fotos (Drive) ============================== */
@@ -204,6 +243,34 @@ function produtosFotoSalvar_(tx, req) {
   p.foto_em = agoraIso_();
   tx.alterou('produtos');
   return { ok: true, foto_em: p.foto_em };
+}
+
+/** Foto extra da galeria (o painel manda já reduzida). */
+function produtosFotoExtraAdicionar_(tx, req) {
+  const p = tx.porId('produtos', req.params[0]);
+  if (!p) throw erro_('Produto não encontrado');
+  const extras = fotosExtras_(p);
+  if (extras.length >= FOTOS_EXTRAS_MAX) throw erro_('Cada produto pode ter até ' + FOTOS_EXTRAS_MAX + ' fotos extras');
+  const foto = lerFotoDataUrl_(req.body.foto);
+  const extensao = foto.tipo.split('/')[1].replace('jpeg', 'jpg');
+  const nome = 'produto-' + p.id + '-extra-' + String(p.nome || '').replace(/[^\w-]+/g, '-').slice(0, 40) + '.' + extensao;
+  const arquivo = pastaFotos_().createFile(Utilities.newBlob(foto.bytes, foto.tipo, nome));
+  extras.push({ id: arquivo.getId(), em: emUnico_(p) });
+  p.fotos_extras = extras;
+  tx.alterou('produtos');
+  return { ok: true, fotos_extras: extras };
+}
+
+function produtosFotoExtraRemover_(tx, req) {
+  const p = tx.porId('produtos', req.params[0]);
+  if (!p) throw erro_('Produto não encontrado');
+  const fotoId = String(req.params[1]);
+  const extras = fotosExtras_(p);
+  if (!extras.some(function (f) { return f.id === fotoId; })) throw erro_('Foto não encontrada');
+  apagarFotoDrive_(fotoId);
+  p.fotos_extras = extras.filter(function (f) { return f.id !== fotoId; });
+  tx.alterou('produtos');
+  return { ok: true, fotos_extras: p.fotos_extras };
 }
 
 function produtosFotoRemover_(tx, req) {
@@ -323,7 +390,7 @@ function publicarUmaVez_(cf, opcoes) {
 
     // 1) Fotos que faltam (antes da vitrine, para o site nunca apontar para foto que não subiu)
     let naNuvem = !estado.fotos || opcoes.completo ? kvListarFotos_(cf) : estado.fotos.slice();
-    const semFoto = {};
+    const falhou = {};
     d.fotos.forEach(function (f) {
       if (naNuvem.indexOf(f.chave) >= 0) return;
       try {
@@ -331,10 +398,13 @@ function publicarUmaVez_(cf, opcoes) {
         naNuvem.push(f.chave);
       } catch (e) {
         if (/Cloudflare/.test(e.message)) throw e;
-        semFoto[f.produto_id] = true; // arquivo sumiu do Drive: o produto aparece sem foto
+        falhou[f.chave] = true; // arquivo sumiu do Drive: só essa foto sai do site
       }
     });
-    d.vitrine.produtos.forEach(function (p) { if (semFoto[p.id]) p.foto = null; });
+    d.vitrine.produtos.forEach(function (p) {
+      p.fotos = p.fotos.filter(function (u) { return !falhou[chaveFoto_(p.id, (u.match(/[?&]v=(\d+)/) || [])[1])]; });
+      p.foto = p.fotos[0] || null;
+    });
 
     // 2) Vitrine
     d.vitrine.publicado_em = agoraIso_();

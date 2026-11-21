@@ -203,6 +203,7 @@ function mostrarNuvemshop(s) {
     }
     document.getElementById('ns-sincronizar').hidden = !s.conectado;
     document.getElementById('ns-desconectar').hidden = !s.conectado;
+    document.getElementById('ns-fotos').hidden = !s.conectado;
     document.getElementById('ns-form').hidden = false;
     document.getElementById('ns-redirecionamento').value = s.redirecionamento || '';
     document.getElementById('ns-app').value = s.app_id || '';
@@ -302,5 +303,22 @@ async function desconectarNuvemshop() {
         mostrarNuvemshop(await fetchJSON('/api/nuvemshop', { method: 'DELETE' }));
     } catch (e) {
         alert('Não foi possível desconectar: ' + e.message);
+    }
+}
+
+async function importarFotosNuvemshop() {
+    const botao = document.getElementById('ns-fotos');
+    botao.disabled = true;
+    botao.textContent = 'Trazendo fotos...';
+    try {
+        const s = await fetchJSON('/api/nuvemshop/fotos', { method: 'POST' });
+        mostrarNuvemshop(s);
+        const extra = (s.avisos_fotos || []).length ? '\n\n' + s.avisos_fotos.join('\n') : '';
+        alert(s.fotos_importadas ? `${s.fotos_importadas} foto(s) trazida(s) da Nuvemshop. O site já foi atualizado.${extra}` : `Nenhuma foto nova na Nuvemshop.${extra}`);
+    } catch (e) {
+        alert('Não foi possível trazer as fotos: ' + e.message);
+    } finally {
+        botao.disabled = false;
+        botao.textContent = '🖼️ Trazer fotos da Nuvemshop';
     }
 }
