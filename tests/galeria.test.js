@@ -100,7 +100,7 @@ describe('trazer fotos da Nuvemshop', () => {
     return g;
   }
 
-  test('traz as fotos 2 em diante como extras (principal já existe), na ordem, e republica o site', () => {
+  test('traz as fotos 2 em diante como extras (principal já existe), na ordem; a publicação seguinte leva ao site', () => {
     const g = conectado();
     const r = g.api('POST', '/api/nuvemshop/fotos');
     expect(r.fotos_importadas).toBe(2);
@@ -108,6 +108,7 @@ describe('trazer fotos da Nuvemshop', () => {
     expect(extras).toHaveLength(2);
     const bytes = extras.map((e) => g.estado.drive.get(e.id).bytes[3]);
     expect(bytes).toEqual([2, 3]); // posição 2 (caixas) e depois 3 (verso)
+    g.ctx.publicarLojaAgora(); // a tela chama em segundo plano
     expect(vitrine(g).produtos[0].fotos).toHaveLength(3);
 
     // de novo: não duplica

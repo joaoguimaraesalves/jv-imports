@@ -566,7 +566,7 @@ function nsBaixarImagem_(src) {
 /**
  * Traz para o painel as fotos que estão na Nuvemshop e ainda não estão aqui: a 1ª vira a
  * principal só se o produto não tiver foto; as outras viram fotos extras (sem repetir:
- * cada extra guarda o id da imagem da Nuvemshop). Depois republica o site.
+ * cada extra guarda o id da imagem da Nuvemshop). A tela republica o site em seguida.
  */
 function nuvemshopImportarFotos_() {
   if (!nsCred_()) throw erro_('Conecte a Nuvemshop primeiro.');
@@ -611,7 +611,8 @@ function nuvemshopImportarFotos_() {
       });
       tx.alterou('produtos');
     }, false);
-    publicarLoja_({});
+    // A publicação no site (envio das fotos para a Cloudflare) roda depois, em segundo plano,
+    // chamada pela tela: aqui não dá tempo de baixar tudo e ainda publicar (limite de 6 min).
   }
   return Object.assign(nuvemshopSituacao_(), { fotos_importadas: importadas, avisos_fotos: avisos });
 }
