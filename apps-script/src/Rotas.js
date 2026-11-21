@@ -48,6 +48,11 @@ const ROTAS = [
   ['GET', /^config\/vendas$/, configVendasLer_],
   ['PUT', /^config\/vendas$/, configVendasSalvar_],
 
+  // Análise de preços (Analise.js)
+  ['GET', /^analise$/, doArquivoLoja_('analiseListar_')],
+  ['PUT', /^analise\/config$/, doArquivoLoja_('analiseConfigSalvar_')],
+  ['PUT', /^analise\/precos\/(\d+)$/, doArquivoLoja_('analisePrecoSalvar_')],
+
   ['GET', /^produtos$/, produtosListar_],
   ['POST', /^produtos$/, produtosCriar_],
   ['PUT', /^produtos\/(\d+)$/, produtosEditar_],

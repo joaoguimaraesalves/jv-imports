@@ -15,6 +15,7 @@ function mudarTela(nomeTela) {
     if (nomeTela === 'movimentos')   carregarMovimentos();
     if (nomeTela === 'historico')    carregarHistorico();
     if (nomeTela === 'loja')         carregarLojaAdmin();
+    if (nomeTela === 'analise')      carregarAnalise();
 }
 
 // Menu lateral no celular (gaveta)

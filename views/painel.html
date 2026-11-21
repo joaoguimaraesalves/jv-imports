@@ -24,6 +24,7 @@
         <ul class="menu-list">
             <li id="menu-dashboard"    class="active" onclick="mudarTela('dashboard')">❖ Dashboard</li>
             <li id="menu-produtos"     onclick="mudarTela('produtos')">📦 Estoque da Loja</li>
+            <li id="menu-analise"      onclick="mudarTela('analise')">📊 Análise de Preços</li>
             <li id="menu-vendas"       onclick="mudarTela('vendas')">🛒 Histórico de Vendas</li>
             <li id="menu-compras"      onclick="mudarTela('compras')">📥 Compras / Entradas</li>
             <li id="menu-contas-pagar" onclick="mudarTela('contas-pagar')">💳 Contas a Pagar</li>
@@ -192,6 +193,56 @@
                 <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>No site</th><th>Ações</th></tr></thead>
                 <tbody id="lista-produtos"></tbody>
             </table>
+        </div>
+
+        <!-- Análise de Preços -->
+        <div id="tela-analise" class="tela">
+            <div class="header">
+                <h2>📊 Análise de Preços</h2>
+                <div class="header-acoes">
+                    <select id="analise-filtro" class="select-filtro" onchange="renderizarAnalise()">
+                        <option value="">Todos os produtos</option>
+                        <option value="estoque">Só com estoque</option>
+                        <option value="atencao">Só os que pedem atenção</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header"><h3>⚙️ Como calcular</h3></div>
+                <div class="form-row analise-config">
+                    <div class="form-group"><label>Margem que eu quero (%)</label><input type="number" id="analise-margem" min="0" max="90" step="1" oninput="renderizarAnalise(); simularCompra()"></div>
+                    <div class="form-group"><label>Taxa média por venda (%)</label><input type="number" id="analise-taxa" min="0" max="40" step="0.1" oninput="renderizarAnalise(); simularCompra()"></div>
+                    <div class="form-group"><label>Gasto extra por venda (R$)</label><input type="number" id="analise-gastos" min="0" step="0.5" oninput="renderizarAnalise(); simularCompra()"></div>
+                    <div class="form-group analise-config-botao"><button class="btn-blue" onclick="salvarAnaliseConfig()">Salvar</button> <small id="analise-config-msg"></small></div>
+                </div>
+                <small id="analise-taxa-real" class="analise-nota"></small>
+                <small class="analise-nota">Margem = lucro ÷ preço de venda. Taxa = maquininha/plataforma (Pix 0%, cartão ~3–5%, Mercado Livre 13–18%). Gasto extra = embalagem, motoboy, brinde.</small>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card bg-green"><div class="card-header"><span>Margem média no preço atual</span></div><div class="card-value" id="analise-card-margem">--</div></div>
+                <div class="card bg-orange"><div class="card-header"><span>Produtos abaixo da margem desejada</span></div><div class="card-value" id="analise-card-abaixo">--</div></div>
+                <div class="card bg-red"><div class="card-header"><span>Pedem atenção (preço x mercado)</span></div><div class="card-value" id="analise-card-atencao">--</div></div>
+                <div class="card bg-blue"><div class="card-header"><span>Lucro a mais no estoque atual (preços sugeridos)</span></div><div class="card-value" id="analise-card-ganho">--</div></div>
+            </div>
+            <small id="analise-card-pesquisa" class="analise-nota"></small>
+
+            <table class="tabela-analise">
+                <thead><tr><th>Produto</th><th>Custo</th><th>Preço</th><th>Lucro/un · margem · markup</th><th>Mercado</th><th>Você x média</th><th>Preço sugerido</th><th>Pagar no máximo</th><th>Vendas 90d / total</th><th>Diagnóstico</th><th></th></tr></thead>
+                <tbody id="lista-analise"></tbody>
+            </table>
+
+            <div class="chart-container">
+                <div class="chart-header"><h3>🧮 Quanto posso pagar num produto?</h3></div>
+                <div class="form-row analise-config">
+                    <div class="form-group"><label>Preço que ele vale no mercado / que vou vender (R$)</label><input type="number" id="sim-preco-venda" min="0" step="1" oninput="simularCompra()" placeholder="Ex.: 189"></div>
+                    <div class="form-group"><label>Quanto vou pagar (R$, opcional)</label><input type="number" id="sim-custo" min="0" step="0.5" oninput="simularCompra()" placeholder="Ex.: 95"></div>
+                    <div class="form-group"><label>Margem (%)</label><input type="number" id="sim-margem" min="0" max="90" step="1" oninput="simularCompra()" placeholder="a de cima"></div>
+                </div>
+                <div id="sim-resultado" class="analise-simulacao"></div>
+                <small class="analise-nota">Regra: custo máximo = preço de venda × (1 − taxa − margem) − gasto extra. No custo entram o produto, o frete e o imposto da importação.</small>
+            </div>
         </div>
 
         <!-- Vendas -->
@@ -658,6 +709,29 @@
         </div>
     </div>
 
+    <!-- Modal: pesquisa de mercado de um produto (Análise de Preços) -->
+    <div id="modal-pesquisa" class="modal-overlay">
+        <div class="modal-content modal-wide">
+            <form onsubmit="salvarPesquisaMercado(event)">
+                <h3>Pesquisa de mercado · <span id="pesquisa-titulo"></span></h3>
+                <input type="hidden" id="pesquisa-produto-id">
+                <p class="pesquisa-links">Pesquisar em: <span id="pesquisa-links"></span></p>
+                <div class="form-row">
+                    <div class="form-group"><label>Menor preço (R$)</label><input type="number" id="pesquisa-minimo" min="0" step="0.01"></div>
+                    <div class="form-group"><label>Preço médio (R$)</label><input type="number" id="pesquisa-medio" min="0" step="0.01" placeholder="vazio = meio da faixa"></div>
+                    <div class="form-group"><label>Maior preço (R$)</label><input type="number" id="pesquisa-maximo" min="0" step="0.01"></div>
+                </div>
+                <div class="form-group"><label>Onde viu (lojas e preços)</label><textarea id="pesquisa-fontes" rows="3" maxlength="500"></textarea></div>
+                <div class="form-group"><label>Observação</label><input type="text" id="pesquisa-obs" maxlength="500" placeholder="Ex.: concorrente no OLX DF a R$ 150"></div>
+                <small id="pesquisa-aviso" class="analise-nota"></small>
+                <div class="modal-actions">
+                    <button type="button" class="btn-gray" onclick="fecharModal('modal-pesquisa')">Cancelar</button>
+                    <button type="submit" class="btn-blue">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Ordem importa: utils → módulos → app -->
     <script src="/js/utils.js"></script>
     <script src="/js/planejamento.js"></script>
@@ -670,6 +744,8 @@
     <script src="/js/movimentos.js"></script>
     <script src="/js/historico.js"></script>
     <script src="/js/loja-admin.js"></script>
+    <script src="/js/analise-calc.js"></script>
+    <script src="/js/analise.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/tema.js"></script>
 </body>

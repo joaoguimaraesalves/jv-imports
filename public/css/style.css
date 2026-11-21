@@ -589,3 +589,23 @@ a.link-botao { text-decoration: none; display: inline-flex; align-items: center;
     .filtros-vendas .select-filtro { flex: 1 1 45%; }
     .modal-actions { flex-wrap: wrap; }
 }
+
+/* ===== Análise de Preços ===== */
+.analise-config { flex-wrap: wrap; align-items: flex-end; }
+.analise-config .form-group { min-width: 170px; }
+.analise-config-botao { flex: 0 0 auto !important; min-width: 0 !important; display: flex; align-items: center; gap: 8px; }
+.analise-nota { display: block; color: var(--text-muted); margin: 6px 0; line-height: 1.4; }
+.tabela-analise td { vertical-align: top; }
+.tabela-analise small { color: var(--text-muted); }
+.txt-verde { color: var(--color-green); }
+.txt-vermelho { color: var(--color-red); }
+.txt-azul { color: var(--color-blue); }
+.diag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.8rem; line-height: 1.3; max-width: 220px; white-space: normal; }
+.diag-ok { background: rgba(16, 185, 129, 0.15); color: var(--color-green); }
+.diag-info { background: rgba(59, 130, 246, 0.15); color: var(--color-blue); }
+.diag-atencao { background: rgba(245, 158, 11, 0.15); color: var(--color-orange); }
+.diag-ruim { background: rgba(239, 68, 68, 0.15); color: var(--color-red); }
+.analise-simulacao p { margin: 6px 0; line-height: 1.5; }
+.pesquisa-links { margin-bottom: 12px; font-size: 0.9rem; color: var(--text-muted); }
+.pesquisa-links a { color: var(--color-blue); margin-right: 10px; }
+#modal-pesquisa textarea { width: 100%; resize: vertical; }

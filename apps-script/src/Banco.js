@@ -50,6 +50,10 @@ const ESQUEMA = {
     origem_id: 'int', observacao: 'text', data: 'text',
   },
   configuracoes: { chave: 'text', valor: 'text', atualizado_em: 'text' },
+  // Análise de preços (Analise.js): preço que o mercado pratica para cada produto
+  precos_mercado: {
+    produto_id: 'int', minimo: 'num', medio: 'num', maximo: 'num', fontes: 'text', observacao: 'text', atualizado_em: 'text',
+  },
   historico_calculos: { id: 'int', data: 'text', dados: 'json' },
 };
 
