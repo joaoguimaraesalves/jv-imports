@@ -313,10 +313,12 @@ async function importarFotosNuvemshop() {
     try {
         const s = await fetchJSON('/api/nuvemshop/fotos', { method: 'POST' });
         mostrarNuvemshop(s);
-        const extra = (s.avisos_fotos || []).length ? '\n\n' + s.avisos_fotos.join('\n') : '';
-        alert(s.fotos_importadas ? `${s.fotos_importadas} foto(s) trazida(s) da Nuvemshop. O site já foi atualizado.${extra}` : `Nenhuma foto nova na Nuvemshop.${extra}`);
+        const extra = (s.avisos_fotos || []).length ? ' ' + s.avisos_fotos.join(' ') : '';
+        document.getElementById('ns-texto').textContent = (s.fotos_importadas
+            ? `🖼️ ${s.fotos_importadas} foto(s) trazida(s) da Nuvemshop. O site já foi atualizado com a galeria.`
+            : '🖼️ Nenhuma foto nova na Nuvemshop: as galerias já estão iguais.') + extra;
     } catch (e) {
-        alert('Não foi possível trazer as fotos: ' + e.message);
+        document.getElementById('ns-texto').textContent = '⚠️ Não foi possível trazer as fotos: ' + e.message;
     } finally {
         botao.disabled = false;
         botao.textContent = '🖼️ Trazer fotos da Nuvemshop';
