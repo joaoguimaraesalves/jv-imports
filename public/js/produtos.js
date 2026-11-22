@@ -11,8 +11,22 @@ function situacaoNoSite(p) {
         (p.foto_em ? '' : '<span class="sem-foto-aviso">📷 sem foto</span>');
 }
 
+// Vendas dos últimos 30 dias por produto (para "vendidos" e "dá para quantos dias")
+let vendidos30Estoque = {};
+let filtroEstoque = 'todos';
+
 async function carregarProdutos() {
-    produtosCadastro = await fetchJSON('/api/produtos');
+    const [produtos, vendas] = await Promise.all([
+        fetchJSON('/api/produtos'),
+        fetchJSON('/api/vendas').catch(() => [])
+    ]);
+    produtosCadastro = produtos;
+    const limite = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    vendidos30Estoque = {};
+    (vendas || []).forEach(v => {
+        if (v.historico || !v.produto_id || String(v.data || '').slice(0, 10) < limite) return;
+        vendidos30Estoque[v.produto_id] = (vendidos30Estoque[v.produto_id] || 0) + (Number(v.quantidade) || 0);
+    });
     renderizarProdutos();
 }
 
@@ -25,6 +39,44 @@ function resumoEstoque(produtos) {
     return { custo, venda, unidades, produtos: comEstoque.length, lucro: venda - custo, margem: venda > 0 ? ((venda - custo) / venda) * 100 : 0 };
 }
 
+function escEstoque(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Situação do estoque de um produto: esgotado, acabando (≤ 2) ou ok
+function situacaoEstoque(p) {
+    if (p.quantidade <= 0) return { classe: 'esgotado', texto: 'Esgotado' };
+    if (p.quantidade <= 2) return { classe: 'baixo', texto: p.quantidade === 1 ? 'Última unidade' : `Últimas ${p.quantidade}` };
+    return { classe: 'ok', texto: 'Em estoque' };
+}
+
+function fotoProdutoEstoque(p) {
+    return p.foto_url || (p.foto_em ? `/api/loja/foto/${p.id}?v=${encodeURIComponent(p.foto_em)}` : null);
+}
+
+const FILTROS_ESTOQUE = [
+    ['todos', 'Todos', () => true],
+    ['estoque', 'Em estoque', p => p.quantidade > 2],
+    ['baixo', 'Acabando', p => p.quantidade > 0 && p.quantidade <= 2],
+    ['esgotado', 'Esgotados', p => p.quantidade <= 0],
+    ['oculto', 'Fora do site', p => p.na_loja === false],
+    ['semfoto', 'Sem foto', p => !fotoProdutoEstoque(p)]
+];
+
+function filtrarEstoque(id) {
+    filtroEstoque = id;
+    renderizarProdutos();
+}
+
+function mudarModoEstoque(modo) {
+    try { localStorage.setItem('jv-estoque-modo', modo); } catch (e) { /* sem armazenamento: só não lembra */ }
+    renderizarProdutos();
+}
+
+function modoEstoque() {
+    try { return localStorage.getItem('jv-estoque-modo') === 'lista' ? 'lista' : 'grade'; } catch (e) { return 'grade'; }
+}
+
 function renderizarProdutos() {
     const r = resumoEstoque(produtosCadastro);
     document.getElementById('resumo-estoque').innerHTML = `
@@ -33,33 +85,92 @@ function renderizarProdutos() {
         <div><span>Lucro possível</span><strong style="color: var(--color-green)">${formatarMoeda(r.lucro)}</strong><small class="texto-suave">venda − custo</small></div>
         <div><span>Margem média</span><strong>${r.margem.toFixed(1)}%</strong><small class="texto-suave">lucro sobre a venda</small></div>`;
 
-    const busca = (document.getElementById('busca-produtos').value || '').trim().toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const produtos = !busca ? produtosCadastro : produtosCadastro.filter(p =>
-        `${p.nome} ${p.categoria || ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(busca));
-    const tbody = document.getElementById('lista-produtos');
-    tbody.innerHTML = '';
+    // Chips de filtro com a contagem de cada um
+    document.getElementById('est-filtros').innerHTML = FILTROS_ESTOQUE.map(([id, nome, teste]) => {
+        const n = produtosCadastro.filter(teste).length;
+        return `<button type="button" class="est-chip est-chip-${id}${filtroEstoque === id ? ' ativo' : ''}" aria-pressed="${filtroEstoque === id}" onclick="filtrarEstoque('${id}')">${nome} <span>${n}</span></button>`;
+    }).join('');
+
+    // Categorias existentes (mantém a escolhida)
+    const selCat = document.getElementById('est-categoria');
+    const catAtual = selCat.value;
+    const categorias = [...new Set(produtosCadastro.map(p => (p.categoria || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    selCat.innerHTML = '<option value="">Todas as categorias</option>' + categorias.map(c => `<option value="${escEstoque(c)}">${escEstoque(c)}</option>`).join('');
+    selCat.value = categorias.includes(catAtual) ? catAtual : '';
+
+    const modo = modoEstoque();
+    document.getElementById('est-modo-grade').classList.toggle('ativo', modo === 'grade');
+    document.getElementById('est-modo-lista').classList.toggle('ativo', modo === 'lista');
+
+    const normalizar = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const busca = normalizar((document.getElementById('busca-produtos').value || '').trim());
+    const testeFiltro = (FILTROS_ESTOQUE.find(f => f[0] === filtroEstoque) || FILTROS_ESTOQUE[0])[2];
+    const vendidos = p => vendidos30Estoque[p.id] || 0;
+    const ordens = {
+        'nome': (a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'),
+        'estoque-menor': (a, b) => a.quantidade - b.quantidade,
+        'estoque-maior': (a, b) => b.quantidade - a.quantidade,
+        'vendidos': (a, b) => vendidos(b) - vendidos(a),
+        'parado': (a, b) => (b.custo * Math.max(b.quantidade, 0)) - (a.custo * Math.max(a.quantidade, 0)),
+        'preco': (a, b) => (Number(b.preco) || 0) - (Number(a.preco) || 0)
+    };
+    const produtos = produtosCadastro
+        .filter(p => testeFiltro(p))
+        .filter(p => !selCat.value || (p.categoria || '').trim() === selCat.value)
+        .filter(p => !busca || normalizar(`${p.nome} ${p.categoria || ''}`).includes(busca))
+        .sort(ordens[document.getElementById('est-ordem').value] || ordens.nome);
+
+    const grade = document.getElementById('lista-produtos');
+    grade.className = 'est-grade' + (modo === 'lista' ? ' lista' : '');
     if (!produtos.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">${busca ? 'Nenhum produto com esse nome.' : 'Nenhum produto cadastrado ainda.'}</td></tr>`;
+        grade.innerHTML = `<div class="est-vazio">${produtosCadastro.length ? 'Nenhum produto com esse filtro.' : 'Nenhum produto cadastrado ainda.'}</div>`;
         return;
     }
 
-    produtos.forEach(p => {
-        const estoqueBaixo = p.quantidade <= 2;
-        tbody.innerHTML += `
-            <tr>
-                <td>#${p.id}</td>
-                <td>${p.nome}${p.categoria ? `<small class="venda-cliente">${p.categoria}</small>` : ''}</td>
-                <td>${formatarMoeda(p.custo)}</td>
-                <td>${p.preco > 0 ? formatarMoeda(p.preco) : '<span class="badge badge-pendente">Sem preço</span>'}</td>
-                <td style="${estoqueBaixo ? 'color: var(--color-red); font-weight: bold;' : ''}">${p.quantidade} un</td>
-                <td>${situacaoNoSite(p)}</td>
-                <td>
-                    <button class="btn-pagar" onclick="editarProduto(${p.id})">Editar</button>
-                    <button class="btn-excluir" onclick="excluirRegistro('produtos', ${p.id}, carregarProdutos)">Excluir</button>
-                </td>
-            </tr>`;
-    });
+    const maxQtd = Math.max(10, ...produtosCadastro.map(p => p.quantidade + vendidos(p)));
+    grade.innerHTML = produtos.map(p => {
+        const sit = situacaoEstoque(p);
+        const foto = fotoProdutoEstoque(p);
+        const preco = Number(p.preco) || 0;
+        const custo = Number(p.custo) || 0;
+        const margem = preco > 0 ? ((preco - custo) / preco) * 100 : null;
+        const v30 = vendidos(p);
+        const dias = v30 > 0 && p.quantidade > 0 ? Math.round(p.quantidade / (v30 / 30)) : null;
+        const extras = Array.isArray(p.fotos_extras) ? p.fotos_extras.length : 0;
+        const largura = Math.max(0, Math.min(100, (p.quantidade / maxQtd) * 100));
+        const nome = escEstoque(p.nome);
+        return `
+        <article class="est-card est-${sit.classe}${p.na_loja === false ? ' est-fora' : ''}" tabindex="0" role="button"
+                 aria-label="Editar ${nome}" onclick="editarProduto(${p.id})" onkeydown="if(event.key==='Enter'&&event.target===this)editarProduto(${p.id})">
+            <div class="est-foto">
+                ${foto ? `<img src="${escEstoque(foto)}" alt="" loading="lazy">` : '<div class="est-sem-foto"><span>📷</span>sem foto</div>'}
+                <span class="est-selo est-selo-${sit.classe}">${sit.texto}</span>
+                ${p.destaque ? '<span class="est-destaque" title="Destaque no site">★</span>' : ''}
+                ${extras ? `<span class="est-mais-fotos">+${extras} foto${extras > 1 ? 's' : ''}</span>` : ''}
+            </div>
+            <div class="est-info">
+                <small class="est-cat">${p.categoria ? escEstoque(p.categoria) + ' · ' : ''}#${p.id}</small>
+                <h4 class="est-nome" title="${nome}">${nome}</h4>
+                <div class="est-preco">
+                    ${p.preco_antigo > preco && preco > 0 ? `<s>${formatarMoeda(p.preco_antigo)}</s>` : ''}
+                    ${preco > 0 ? `<strong>${formatarMoeda(preco)}</strong>` : '<span class="badge badge-pendente">Sem preço</span>'}
+                </div>
+                <div class="est-custo">Custo ${formatarMoeda(custo)}${margem !== null ? ` · <b class="${margem >= 30 ? 'txt-verde' : margem >= 15 ? '' : 'txt-vermelho'}">margem ${margem.toFixed(0)}%</b>` : ''}</div>
+                <div class="est-qtd">
+                    <span class="est-qtd-num">${p.quantidade}<small> un</small></span>
+                    <span class="est-qtd-info">${v30 ? `${v30} vendido${v30 > 1 ? 's' : ''} em 30 dias` : 'sem vendas em 30 dias'}${dias !== null ? `<br>dá para ~${dias} dia${dias === 1 ? '' : 's'}` : ''}</span>
+                </div>
+                <div class="est-nivel" aria-hidden="true"><div style="width:${largura}%"></div></div>
+                <div class="est-rodape">
+                    <div class="est-site">${situacaoNoSite(p)}</div>
+                    <div class="est-acoes">
+                        <button type="button" class="btn-pagar" onclick="event.stopPropagation(); editarProduto(${p.id})">Editar</button>
+                        <button type="button" class="btn-excluir" title="Excluir" onclick="event.stopPropagation(); excluirRegistro('produtos', ${p.id}, carregarProdutos)">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </article>`;
+    }).join('');
 }
 
 function mostrarPreviewFoto(src) {

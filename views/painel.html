@@ -189,10 +189,25 @@
             <div class="chart-container resumo-estoque">
                 <div class="caixa-resumo" id="resumo-estoque"></div>
             </div>
-            <table>
-                <thead><tr><th>ID</th><th>Nome do Produto</th><th>Custo (Fábrica)</th><th>Preço de Venda</th><th>Qtd. Estoque</th><th>No site</th><th>Ações</th></tr></thead>
-                <tbody id="lista-produtos"></tbody>
-            </table>
+            <div class="est-barra">
+                <div class="est-filtros" id="est-filtros" role="group" aria-label="Filtrar produtos"></div>
+                <div class="est-controles">
+                    <select id="est-categoria" class="select-filtro" onchange="renderizarProdutos()" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+                    <select id="est-ordem" class="select-filtro" onchange="renderizarProdutos()" aria-label="Ordenar">
+                        <option value="nome">Ordem: nome</option>
+                        <option value="estoque-menor">Menor estoque</option>
+                        <option value="estoque-maior">Maior estoque</option>
+                        <option value="vendidos">Mais vendidos (30 dias)</option>
+                        <option value="parado">Mais dinheiro parado</option>
+                        <option value="preco">Maior preço</option>
+                    </select>
+                    <div class="est-modo" role="group" aria-label="Modo de exibição">
+                        <button type="button" id="est-modo-grade" onclick="mudarModoEstoque('grade')" title="Vitrine">▦</button>
+                        <button type="button" id="est-modo-lista" onclick="mudarModoEstoque('lista')" title="Lista">☰</button>
+                    </div>
+                </div>
+            </div>
+            <div id="lista-produtos" class="est-grade"></div>
         </div>
 
         <!-- Análise de Preços -->
