@@ -145,6 +145,14 @@
             cats.map((c) => chip(`data-cat="${esc(c.chave)}"`, c.rotulo, c.total, c.chave === estado.categoria)).join('') +
             `<button type="button" class="chip chip-toggle" data-pronta aria-pressed="${estado.soDisponiveis}">⚡ Pronta entrega</button>`;
 
+        // Lista de categorias (seção "Categorias.") — texto, total e seta
+        const lista = $('lista-cats');
+        if (lista) {
+            const seta = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 17 17 7M8 7h9v9"/></svg>';
+            lista.innerHTML = cats.map((c) =>
+                `<a class="cat-item" href="#produtos" data-cat="${esc(c.chave)}"><span><strong>${esc(c.rotulo)}</strong><small>${c.total} ${c.total === 1 ? 'produto' : 'produtos'}</small></span>${seta}</a>`).join('');
+        }
+
         // Dentro de Fones: filtro por marca (só aparece se houver mais de uma)
         const marcas = estado.categoria !== 'todas' && temMarcas(estado.categoria) ? marcasDaCategoria() : [];
         if (estado.marca !== 'todas' && !marcas.some(([m]) => m === estado.marca)) estado.marca = 'todas';
@@ -183,8 +191,9 @@
         return s.length ? `<div class="selos-card">${s.join('')}</div>` : '';
     }
 
-    function precoHtml(p) {
-        return `<div class="preco">${p.preco_antigo ? `<s>${moeda(p.preco_antigo)}</s>` : ''}<strong>${moeda(p.preco)}</strong></div>`;
+    function precoHtml(p, cartao) {
+        return `<div class="preco">${p.preco_antigo ? `<s>${moeda(p.preco_antigo)}</s>` : ''}<strong>${moeda(p.preco)}</strong>${cartao ? '<span class="preco-pix">no Pix</span>' : ''}</div>` +
+            (cartao ? '<p class="preco-cartao">ou em até 12x no cartão</p>' : '');
     }
 
     function estoqueHtml(p) {
@@ -206,9 +215,9 @@
             return `<article class="card${p.disponivel ? '' : ' esgotado'}${mudaram.has(p.id) ? ' mudou' : ''}" data-id="${p.id}">
                 <button type="button" class="card-foto" data-abrir="${p.id}" aria-label="Ver ${esc(p.nome)}">${fotoHtml(p)}${selosHtml(p)}</button>
                 <div class="card-corpo">
-                    ${p.categoria || marcaDe(p) ? `<span class="card-cat">${esc([p.categoria, marcaDe(p)].filter(Boolean).join(' · '))}</span>` : ''}
+                    ${marcaDe(p) || p.categoria ? `<span class="card-cat">${esc(marcaDe(p) || p.categoria)}</span>` : ''}
                     <h3><button type="button" data-abrir="${p.id}">${esc(p.nome)}</button></h3>
-                    ${precoHtml(p)}
+                    ${precoHtml(p, true)}
                     ${estoqueHtml(p)}
                     ${botao}
                 </div>
@@ -453,7 +462,10 @@
         if (d.abrir) return abrirProduto(Number(d.abrir));
         if (d.add) return adicionar(Number(d.add));
         if (d.encomendar) { const p = estado.porId.get(Number(d.encomendar)); if (p) comprarAgora(p, 1); return; }
-        if (d.cat) { estado.categoria = d.cat; estado.marca = 'todas'; desenharChips(); desenharGrade(); return; }
+        if (d.cat) {
+            if (alvo.tagName === 'A') { e.preventDefault(); $('produtos').scrollIntoView({ behavior: 'smooth' }); }
+            estado.categoria = d.cat; estado.marca = 'todas'; desenharChips(); desenharGrade(); return;
+        }
         if (d.marca) { estado.marca = d.marca; desenharChips(); desenharGrade(); return; }
         if (alvo.hasAttribute('data-pronta')) { estado.soDisponiveis = !estado.soDisponiveis; desenharChips(); desenharGrade(); return; }
         if (d.menos) return mudarQtd(Number(d.menos), -1);
