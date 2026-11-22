@@ -254,6 +254,50 @@ function nsFormaPagamento_(pedido) {
   return m || 'nuvemshop';
 }
 
+/**
+ * Taxas do Nuvem Pago (único meio de pagamento ativo na loja). Padrão conferido no admin em
+ * 21/11/2026: cartão recebendo em 30 dias. Editáveis na tela Loja Online (configuracoes.ns_taxas).
+ * A taxa sai do lucro da venda (vendas.taxa, em R$), como a da maquininha nas vendas do painel.
+ */
+const NS_TAXAS_PADRAO = {
+  cartao_pct: 4.69, cartao_fixo: 0.35,
+  debito_pct: 4.69, debito_fixo: 0.35,
+  pix_pct: 0.99, pix_fixo: 0,
+  boleto_pct: 0, boleto_fixo: 2.39,
+};
+
+function nsTaxasLer_(tx) {
+  let salvas = {};
+  try { salvas = JSON.parse(configLer_(tx, 'ns_taxas') || '{}') || {}; } catch (e) { salvas = {}; }
+  return Object.assign({}, NS_TAXAS_PADRAO, salvas);
+}
+
+/** Taxa (R$) do pedido inteiro: % sobre o total pago pelo cliente (com frete) + valor fixo. */
+function nsTaxaPedido_(taxas, forma, total) {
+  if (!(forma in { cartao: 1, debito: 1, pix: 1, boleto: 1 })) return 0; // outras formas: sem taxa conhecida
+  const pct = Number(taxas[forma + '_pct']) || 0;
+  const fixo = Number(taxas[forma + '_fixo']) || 0;
+  return total > 0 ? nsArredondar_(total * pct / 100 + fixo) : 0;
+}
+
+function nuvemshopTaxasLer_(tx) {
+  return { taxas: nsTaxasLer_(tx), padrao: NS_TAXAS_PADRAO };
+}
+
+function nuvemshopTaxasSalvar_(tx, req) {
+  const novas = (req.body && req.body.taxas) || {};
+  const atual = nsTaxasLer_(tx);
+  Object.keys(novas).forEach(function (k) {
+    if (!(k in NS_TAXAS_PADRAO)) return;
+    const n = num_(novas[k]);
+    const max = /_pct$/.test(k) ? 30 : 50;
+    if (n === null || n < 0 || n > max) throw erro_('Taxa inválida em ' + k.replace('_', ' ') + ' (de 0 a ' + max + ')');
+    atual[k] = n;
+  });
+  configGravar_(tx, 'ns_taxas', JSON.stringify(atual));
+  return nuvemshopTaxasLer_(tx);
+}
+
 function nsPedidoDaOrigem_(origem) {
   const m = /^ns:([^:]+):/.exec(String(origem || ''));
   return m ? m[1] : null;
@@ -276,6 +320,7 @@ function nsImportarPedidos_(tx, pedidos, inicio) {
   });
   const porVariante = {};
   tx.linhas('produtos').forEach(function (p) { if (p.ns_variante_id) porVariante[String(p.ns_variante_id)] = p; });
+  const taxas = nsTaxasLer_(tx);
 
   pedidos.forEach(function (pedido) {
     const id = String(pedido.id);
@@ -300,17 +345,26 @@ function nsImportarPedidos_(tx, pedidos, inicio) {
     const forma = nsFormaPagamento_(pedido);
     jaImportado[id] = [];
 
-    (pedido.products || []).forEach(function (item) {
+    // Taxa do Nuvem Pago do pedido, rateada pelo valor de cada item (o último leva a sobra dos centavos)
+    const itens = (pedido.products || []).filter(function (item) { return (parseInt(item.quantity, 10) || 0) > 0; });
+    const valores = itens.map(function (item) { return nsArredondar_((Number(item.price) || 0) * parseInt(item.quantity, 10) * fator); });
+    const somaValores = valores.reduce(function (a, b) { return a + b; }, 0);
+    const taxaPedido = nsTaxaPedido_(taxas, forma, Number(pedido.total) || 0);
+    let taxaRestante = taxaPedido;
+
+    itens.forEach(function (item, i) {
       const qtd = parseInt(item.quantity, 10) || 0;
-      if (qtd <= 0) return;
       const produto = porVariante[String(item.variant_id)] || null;
-      const valor = nsArredondar_((Number(item.price) || 0) * qtd * fator);
+      const valor = valores[i];
+      const taxa = i === itens.length - 1 ? nsArredondar_(taxaRestante)
+        : nsArredondar_(somaValores > 0 ? taxaPedido * valor / somaValores : taxaPedido / itens.length);
+      taxaRestante -= taxa;
       const custo = produto ? nsArredondar_((Number(produto.custo) || 0) * qtd) : 0;
       const venda = tx.inserir('vendas', {
         produto_id: produto ? produto.id : null, produto_nome: produto ? produto.nome : item.name,
         quantidade: qtd, valor: valor, custo: custo, forma_pagamento: forma, data: data, recebido: true,
         cliente: cliente.slice(0, 120), receber_ate: null, data_recebimento: data, historico: false,
-        canal: NS_CANAL, taxa: 0, gastos_extras: 0, origem: 'ns:' + id + ':' + item.variant_id,
+        canal: NS_CANAL, taxa: taxa, gastos_extras: 0, origem: 'ns:' + id + ':' + item.variant_id,
       });
       jaImportado[id].push(venda.id);
       if (!produto) {
@@ -325,7 +379,7 @@ function nsImportarPedidos_(tx, pedidos, inicio) {
         origem_tipo: 'venda', origem_id: venda.id, observacao: 'Nuvemshop pedido #' + pedido.number, data: agoraIso_(),
       });
     });
-    res.importados.push({ numero: pedido.number, cliente: cliente, total: Number(pedido.total) || 0, data: data });
+    res.importados.push({ numero: pedido.number, cliente: cliente, total: Number(pedido.total) || 0, taxa: taxaPedido, data: data });
   });
   return res;
 }

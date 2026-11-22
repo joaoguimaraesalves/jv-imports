@@ -178,10 +178,46 @@ async function sairDoPainel() {
 const quandoCurto = (iso) => iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 
 async function carregarNuvemshop() {
+    let s;
     try {
-        mostrarNuvemshop(await fetchJSON('/api/nuvemshop'));
+        s = await fetchJSON('/api/nuvemshop');
+        mostrarNuvemshop(s);
     } catch (e) {
         document.getElementById('loja-nuvemshop').hidden = true; // painel sem a integração
+        return;
+    }
+    const form = document.getElementById('ns-taxas-form');
+    form.hidden = !s.conectado;
+    if (s.conectado) fetchJSON('/api/nuvemshop/taxas').then(r => mostrarTaxasNuvemshop(r.taxas)).catch(() => { form.hidden = true; });
+}
+
+// Taxas do Nuvem Pago: campos da tela ↔ chaves salvas no servidor
+const CAMPOS_TAXAS_NS = { 'ns-tx-cartao-pct': 'cartao_pct', 'ns-tx-cartao-fixo': 'cartao_fixo', 'ns-tx-pix-pct': 'pix_pct', 'ns-tx-boleto-fixo': 'boleto_fixo' };
+
+function mostrarTaxasNuvemshop(taxas) {
+    Object.entries(CAMPOS_TAXAS_NS).forEach(([campo, chave]) => { document.getElementById(campo).value = taxas[chave]; });
+    const cartao = 100 * taxas.cartao_pct / 100 + taxas.cartao_fixo;
+    const pix = 100 * taxas.pix_pct / 100 + taxas.pix_fixo;
+    document.getElementById('ns-taxas-exemplo').textContent =
+        `Numa venda de R$ 100: cartão ${formatarMoeda(cartao)} · Pix ${formatarMoeda(pix)} · boleto ${formatarMoeda(taxas.boleto_fixo)}.`;
+}
+
+async function salvarTaxasNuvemshop(event) {
+    event.preventDefault();
+    const botao = document.getElementById('ns-taxas-salvar');
+    const taxas = {};
+    Object.entries(CAMPOS_TAXAS_NS).forEach(([campo, chave]) => { taxas[chave] = parseFloat(document.getElementById(campo).value) || 0; });
+    taxas.debito_pct = taxas.cartao_pct; // débito segue o cartão
+    taxas.debito_fixo = taxas.cartao_fixo;
+    botao.disabled = true;
+    try {
+        const r = await fetchJSON('/api/nuvemshop/taxas', { method: 'PUT', body: JSON.stringify({ taxas }) });
+        mostrarTaxasNuvemshop(r.taxas);
+        document.getElementById('ns-taxas-exemplo').textContent = '✅ Salvo. Vale para os próximos pedidos. ' + document.getElementById('ns-taxas-exemplo').textContent;
+    } catch (e) {
+        document.getElementById('ns-taxas-exemplo').textContent = '⚠️ Não foi possível salvar: ' + e.message;
+    } finally {
+        botao.disabled = false;
     }
 }
 
@@ -240,7 +276,7 @@ function mostrarNuvemshop(s) {
 
     document.getElementById('ns-ultimos').innerHTML = s.conectado && s.ultimos_importados.length ? `
         <div style="margin-top:12px"><strong>Últimos pedidos importados</strong>
-        <ul class="caixa-saldo-info" style="margin:6px 0 0 18px">${s.ultimos_importados.map(i => `<li>#${esc(i.numero)} · ${esc(quandoCurto(i.data))} · ${esc(i.cliente)} · ${formatarMoeda(i.total)}</li>`).join('')}</ul></div>` : '';
+        <ul class="caixa-saldo-info" style="margin:6px 0 0 18px">${s.ultimos_importados.map(i => `<li>#${esc(i.numero)} · ${esc(quandoCurto(i.data))} · ${esc(i.cliente)} · ${formatarMoeda(i.total)}${i.taxa ? ` (taxa ${formatarMoeda(i.taxa)})` : ''}</li>`).join('')}</ul></div>` : '';
 }
 
 async function salvarConexaoNuvemshop(event) {

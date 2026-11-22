@@ -251,6 +251,50 @@ describe('pedidos da Nuvemshop → vendas do painel', () => {
     expect(g.api('GET', '/api/nuvemshop').avisos.join(' ')).toMatch(/estoque negativo/);
   });
 
+  test('taxa do Nuvem Pago: cartão sobre o total com frete + fixo, rateada pelos itens', () => {
+    const g = ambiente();
+    conectar(g);
+    g.estado.ns.pedidos.push(pedido(81, 110, [{ ...QCY, quantity: 1 }, { ...CABO, quantity: 2 }], {
+      discount: '24.90', shipping_cost_customer: '20', total: '244.10', payment_details: { method: 'credit_card' },
+    }));
+    avancar(g, 5 * 60e3);
+    g.ctx.sincronizarNuvemshopAgora();
+    const vendas = vendasNs(g).sort((a, b) => a.id - b.id);
+    // 244,10 × 4,69% + 0,35 = 11,80 → 161,10/224,10 do pedido no 1º item, a sobra no 2º
+    expect(vendas[0].taxa).toBe(8.48);
+    expect(vendas[1].taxa).toBe(3.32);
+    expect(g.api('GET', '/api/nuvemshop').ultimos_importados[0]).toMatchObject({ numero: 110, taxa: 11.8 });
+  });
+
+  test('taxa do Nuvem Pago: Pix 0,99%, boleto fixo, forma desconhecida sem taxa', () => {
+    const g = ambiente();
+    conectar(g);
+    g.estado.ns.pedidos.push(
+      pedido(82, 111, [{ ...QCY, quantity: 1 }]),
+      pedido(83, 112, [{ ...CABO, quantity: 1 }], { id: 83, payment_details: { method: 'boleto' } }),
+      pedido(84, 113, [{ ...CABO, quantity: 1 }], { id: 84, payment_details: { method: 'other' } }));
+    avancar(g, 5 * 60e3);
+    g.ctx.sincronizarNuvemshopAgora();
+    const porOrigem = Object.fromEntries(vendasNs(g).map((v) => [v.origem.split(':')[1], v]));
+    expect(porOrigem['82'].taxa).toBe(1.77);
+    expect(porOrigem['83'].taxa).toBe(2.39);
+    expect(porOrigem['84'].taxa).toBe(0);
+  });
+
+  test('taxas editáveis na tela: valem para os próximos pedidos; valor inválido é recusado', () => {
+    const g = ambiente();
+    conectar(g);
+    expect(g.api('GET', '/api/nuvemshop/taxas').taxas).toMatchObject({ cartao_pct: 4.69, cartao_fixo: 0.35, pix_pct: 0.99, boleto_fixo: 2.39 });
+    const r = g.api('PUT', '/api/nuvemshop/taxas', { taxas: { cartao_pct: 5.69, inventada: 3 } });
+    expect(r.taxas.cartao_pct).toBe(5.69);
+    expect(r.taxas.inventada).toBeUndefined();
+    expect(() => g.api('PUT', '/api/nuvemshop/taxas', { taxas: { pix_pct: 40 } })).toThrow(/Taxa inválida/);
+    g.estado.ns.pedidos.push(pedido(85, 114, [{ ...QCY, quantity: 1 }], { payment_details: { method: 'credit_card' } }));
+    avancar(g, 5 * 60e3);
+    g.ctx.sincronizarNuvemshopAgora();
+    expect(vendasNs(g)[0].taxa).toBe(10.54); // 179 × 5,69% + 0,35
+  });
+
   test('canal Nuvemshop aparece na lista de canais das vendas', () => {
     const g = ambiente();
     expect(g.api('GET', '/api/config/vendas').canais).toContain('Nuvemshop');

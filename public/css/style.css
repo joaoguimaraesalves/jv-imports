@@ -720,3 +720,10 @@ body.valores-ocultos .est-custo { filter: blur(6px); user-select: none; }
     .est-card, .est-foto img { transition: none; }
     .est-card:hover, .est-card:hover .est-foto img { transform: none; }
 }
+
+/* ===== Nuvemshop: taxas do Nuvem Pago ===== */
+.ns-taxas { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color); }
+.ns-taxas .caixa-saldo-info { margin: 4px 0 10px; }
+.ns-taxas-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.ns-taxas-grade .form-group { margin: 0; }
+.ns-taxas-acoes { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }

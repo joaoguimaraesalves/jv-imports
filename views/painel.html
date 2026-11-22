@@ -364,6 +364,20 @@
                 <div id="ns-antigos"></div>
                 <div id="ns-ligacoes"></div>
                 <div id="ns-ultimos"></div>
+                <form id="ns-taxas-form" class="ns-taxas" onsubmit="salvarTaxasNuvemshop(event)" hidden>
+                    <strong>Taxas do Nuvem Pago</strong>
+                    <p class="caixa-saldo-info">Descontadas do lucro de cada venda que vem da Nuvemshop (sobre o total pago, com frete). Confira em Nuvemshop → Meios de pagamento; o cartão muda conforme o prazo de recebimento escolhido (2, 14 ou 30 dias).</p>
+                    <div class="ns-taxas-grade">
+                        <div class="form-group"><label for="ns-tx-cartao-pct">Cartão (%)</label><input type="number" id="ns-tx-cartao-pct" step="0.01" min="0" max="30"></div>
+                        <div class="form-group"><label for="ns-tx-cartao-fixo">Cartão (R$ por pedido)</label><input type="number" id="ns-tx-cartao-fixo" step="0.01" min="0"></div>
+                        <div class="form-group"><label for="ns-tx-pix-pct">Pix (%)</label><input type="number" id="ns-tx-pix-pct" step="0.01" min="0" max="30"></div>
+                        <div class="form-group"><label for="ns-tx-boleto-fixo">Boleto (R$ por pedido)</label><input type="number" id="ns-tx-boleto-fixo" step="0.01" min="0"></div>
+                    </div>
+                    <div class="ns-taxas-acoes">
+                        <button type="submit" class="btn-green" id="ns-taxas-salvar">Salvar taxas</button>
+                        <small id="ns-taxas-exemplo" class="texto-suave"></small>
+                    </div>
+                </form>
                 <form id="ns-form" onsubmit="salvarConexaoNuvemshop(event)" style="margin-top:12px">
                     <p class="caixa-saldo-info">Pedido pago na Nuvemshop vira venda aqui e o estoque daqui vai para lá. Passo a passo no README ("Ligar a Nuvemshop"). No app do Portal de Parceiros, a <b>URL de redirecionamento</b> é:</p>
                     <div class="loja-link-linha" style="margin-bottom:10px">

@@ -71,6 +71,8 @@ const ROTAS = [
   // Nuvemshop (Nuvemshop.js): falam com a API de lá, então cuidam da própria trava
   ['GET', /^nuvemshop$/, doArquivoLoja_('nuvemshopSituacao_'), SEM_TRANSACAO],
   ['PUT', /^nuvemshop\/config$/, doArquivoLoja_('nuvemshopConfigSalvar_'), SEM_TRANSACAO],
+  ['GET', /^nuvemshop\/taxas$/, doArquivoLoja_('nuvemshopTaxasLer_')],
+  ['PUT', /^nuvemshop\/taxas$/, doArquivoLoja_('nuvemshopTaxasSalvar_')],
   ['POST', /^nuvemshop\/sincronizar$/, doArquivoLoja_('nuvemshopSincronizar_'), SEM_TRANSACAO],
   ['PUT', /^nuvemshop\/ligar$/, doArquivoLoja_('nuvemshopLigar_'), SEM_TRANSACAO],
   ['POST', /^nuvemshop\/antigos$/, doArquivoLoja_('nuvemshopAntigos_'), SEM_TRANSACAO],
