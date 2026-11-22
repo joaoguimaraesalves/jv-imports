@@ -471,6 +471,7 @@
         if (d.menos) return mudarQtd(Number(d.menos), -1);
         if (d.mais) return mudarQtd(Number(d.mais), +1);
         if (d.remover) return remover(Number(d.remover));
+        if (alvo.hasAttribute('data-whats-retirada')) return abrirWhats('Olá, JV Imports! Quero combinar uma retirada no Residencial Millenium (Quadra 204, Águas Claras). Qual horário fica bom?');
         if (alvo.hasAttribute('data-whats-geral')) return abrirWhats('Olá, JV Imports! Vim pelo site e queria tirar uma dúvida.');
         if (alvo.hasAttribute('data-fechar')) return alvo.closest('dialog').close();
         if (d.foto) return mudarFoto(Number(d.foto));

@@ -547,3 +547,17 @@ dialog::backdrop { background: rgba(10, 10, 16, 0.55); }
 .toast { background: #16131d; color: #fff; border-color: #16131d; }
 :focus-visible { outline-color: var(--azul); }
 .hero .ao-vivo { align-self: flex-start; margin-bottom: 22px; }
+
+/* ---------- Retire com a gente (local de retirada + mapa) ---------- */
+.retirada { background: #f5f5f3; scroll-margin-top: 70px; }
+.retirada-in { max-width: 1180px; margin: 0 auto; padding: 72px var(--lado); display: grid; gap: 32px; align-items: stretch; }
+@media (min-width: 900px) { .retirada-in { grid-template-columns: 1fr 1.15fr; gap: 48px; } }
+.retirada h2 { font-family: var(--fonte-titulo); font-size: clamp(1.9rem, 4.6vw, 2.9rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+.retirada-dados { display: grid; gap: 18px; margin-top: 28px; }
+.retirada-dados div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--borda); }
+.retirada-dados dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-3); padding-top: 3px; }
+.retirada-dados dd { font-weight: 600; line-height: 1.5; }
+.retirada-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.retirada-mapa { min-height: 320px; border-radius: 22px; overflow: hidden; background: #e7e7e4; box-shadow: 0 20px 50px rgba(10, 10, 20, 0.12); }
+.retirada-mapa iframe { width: 100%; height: 100%; min-height: 320px; border: 0; display: block; }
+@media (max-width: 520px) { .retirada-dados div { grid-template-columns: 1fr; gap: 4px; } }
