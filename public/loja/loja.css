@@ -561,3 +561,9 @@ dialog::backdrop { background: rgba(10, 10, 16, 0.55); }
 .retirada-mapa { min-height: 320px; border-radius: 22px; overflow: hidden; background: #e7e7e4; box-shadow: 0 20px 50px rgba(10, 10, 20, 0.12); }
 .retirada-mapa iframe { width: 100%; height: 100%; min-height: 320px; border: 0; display: block; }
 @media (max-width: 520px) { .retirada-dados div { grid-template-columns: 1fr; gap: 4px; } }
+/* Mapa da retirada em imagem (OpenStreetMap no tema da loja) */
+a.retirada-mapa { position: relative; display: block; min-height: 0; aspect-ratio: 4 / 3; text-decoration: none; background: #0d0c11; }
+a.retirada-mapa img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+a.retirada-mapa:hover img { transform: scale(1.02); }
+.mapa-abrir { position: absolute; top: 14px; right: 14px; background: rgba(255, 255, 255, 0.94); color: #16131d; font-weight: 700; font-size: 0.82rem; padding: 8px 12px; border-radius: 999px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
+@media (min-width: 900px) { .retirada-in { align-items: center; } }
