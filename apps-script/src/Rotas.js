@@ -78,6 +78,7 @@ const ROTAS = [
   ['PUT', /^nuvemshop\/ligar$/, doArquivoLoja_('nuvemshopLigar_'), SEM_TRANSACAO],
   ['POST', /^nuvemshop\/antigos$/, doArquivoLoja_('nuvemshopAntigos_'), SEM_TRANSACAO],
   ['POST', /^nuvemshop\/fotos$/, doArquivoLoja_('nuvemshopImportarFotos_'), SEM_TRANSACAO],
+  ['POST', /^nuvemshop\/capas$/, doArquivoLoja_('nuvemshopIgualarCapas_'), SEM_TRANSACAO],
   ['DELETE', /^nuvemshop$/, doArquivoLoja_('nuvemshopDesconectar_'), SEM_TRANSACAO],
 
   ['GET', /^vendas$/, vendasListar_],

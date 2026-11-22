@@ -618,6 +618,93 @@ function nsBaixarImagem_(src) {
 }
 
 /**
+ * Deixa a capa do site igual à da Nuvemshop (a 1ª foto de lá): usa a extra que já veio de lá ou
+ * baixa a foto; a capa antiga vira a 1ª extra. Também tira a cópia repetida da capa antiga que o
+ * "Trazer fotos" importou depois que a capa de lá mudou (a 2ª foto de lá, quando o produto tem a
+ * foto original enviada pelo painel, sem id da Nuvemshop).
+ */
+function nuvemshopIgualarCapas_() {
+  if (!nsCred_()) throw erro_('Conecte a Nuvemshop primeiro.');
+  const produtos = transacao_(function (tx) {
+    return tx.linhas('produtos').filter(function (p) { return p.ns_produto_id; }).map(function (p) {
+      const extras = fotosExtras_(p).map(function (f) { return { id: f.id, ns: String(f.ns || '') }; });
+      return { id: p.id, nome: p.nome, ns: p.ns_produto_id, foto_ns: String(p.foto_ns || ''), tem_principal: !!p.foto_id,
+        original: (!!p.foto_id && !p.foto_ns) || extras.some(function (e) { return !e.ns; }), extras: extras };
+    });
+  }, true);
+
+  const planos = {};
+  const avisos = [];
+  produtos.forEach(function (p) {
+    const dados = nsApi_('get', '/products/' + encodeURIComponent(p.ns));
+    const imagens = ((dados && dados.images) || []).slice().sort(function (a, b) { return (a.position || 0) - (b.position || 0); });
+    if (!imagens.length) return;
+    const plano = {};
+    const ns2 = imagens[1] ? String(imagens[1].id) : '';
+    const dup = ns2 && p.original && p.extras.find(function (e) { return e.ns === ns2; });
+    if (dup) { plano.remover = dup.id; plano.nsDup = ns2; }
+    const capaNs = String(imagens[0].id);
+    if (p.foto_ns !== capaNs) {
+      const ja = p.extras.find(function (e) { return e.ns === capaNs; });
+      if (ja) plano.extra = ja.id;
+      else {
+        const blob = nsBaixarImagem_(imagens[0].src);
+        if (!blob) avisos.push('"' + p.nome + '": não consegui baixar a capa da Nuvemshop.');
+        else {
+          const extensao = blob.getContentType().split('/')[1].replace('jpeg', 'jpg');
+          const arquivo = pastaFotos_().createFile(blob.setName('produto-' + p.id + '-ns-' + capaNs + '.' + extensao));
+          plano.novo = { id: arquivo.getId(), ns: capaNs };
+        }
+      }
+    }
+    if (plano.remover || plano.extra || plano.novo) planos[p.id] = plano;
+  });
+
+  let trocadas = 0;
+  let removidas = 0;
+  if (Object.keys(planos).length) {
+    transacao_(function (tx) {
+      Object.keys(planos).forEach(function (id) {
+        const p = tx.porId('produtos', id);
+        if (!p) return;
+        const plano = planos[id];
+        let extras = fotosExtras_(p);
+        if (plano.remover && extras.some(function (f) { return f.id === plano.remover; })) {
+          apagarFotoDrive_(plano.remover);
+          extras = extras.filter(function (f) { return f.id !== plano.remover; });
+          removidas++;
+          // a foto original (sem id da Nuvemshop) é a mesma imagem: guarda o id para não reimportar
+          if (p.foto_id && !p.foto_ns) p.foto_ns = plano.nsDup;
+          else { const orig = extras.find(function (f) { return !f.ns; }); if (orig) orig.ns = plano.nsDup; }
+        }
+        let nova = null;
+        if (plano.extra) {
+          const i = extras.findIndex(function (f) { return f.id === plano.extra; });
+          if (i >= 0) nova = extras.splice(i, 1)[0];
+        } else if (plano.novo) {
+          p.fotos_extras = extras;
+          nova = { id: plano.novo.id, em: emUnico_(p), ns: plano.novo.ns };
+        }
+        if (nova) {
+          if (p.foto_id && p.foto_em) {
+            const antiga = { id: p.foto_id, em: p.foto_em };
+            if (p.foto_ns) antiga.ns = p.foto_ns;
+            extras.unshift(antiga);
+          }
+          p.foto_id = nova.id;
+          p.foto_em = nova.em;
+          p.foto_ns = nova.ns || null;
+          trocadas++;
+        }
+        p.fotos_extras = extras;
+      });
+      tx.alterou('produtos');
+    }, false);
+  }
+  return Object.assign(nuvemshopSituacao_(), { capas_trocadas: trocadas, fotos_removidas: removidas, avisos_fotos: avisos });
+}
+
+/**
  * Traz para o painel as fotos que estão na Nuvemshop e ainda não estão aqui: a 1ª vira a
  * principal só se o produto não tiver foto; as outras viram fotos extras (sem repetir:
  * cada extra guarda o id da imagem da Nuvemshop). A tela republica o site em seguida.

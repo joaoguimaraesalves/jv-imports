@@ -240,6 +240,8 @@ function mostrarNuvemshop(s) {
     document.getElementById('ns-sincronizar').hidden = !s.conectado;
     document.getElementById('ns-desconectar').hidden = !s.conectado;
     document.getElementById('ns-fotos').hidden = !s.conectado;
+    const capas = document.getElementById('ns-capas');
+    if (capas) capas.hidden = !s.conectado;
     document.getElementById('ns-form').hidden = false;
     document.getElementById('ns-redirecionamento').value = s.redirecionamento || '';
     document.getElementById('ns-app').value = s.app_id || '';
@@ -339,6 +341,26 @@ async function desconectarNuvemshop() {
         mostrarNuvemshop(await fetchJSON('/api/nuvemshop', { method: 'DELETE' }));
     } catch (e) {
         alert('Não foi possível desconectar: ' + e.message);
+    }
+}
+
+async function igualarCapasNuvemshop() {
+    const botao = document.getElementById('ns-capas');
+    botao.disabled = true;
+    botao.textContent = 'Igualando capas...';
+    try {
+        const s = await fetchJSON('/api/nuvemshop/capas', { method: 'POST' });
+        if ((s.capas_trocadas || s.fotos_removidas) && typeof publicarLojaEmSegundoPlano === 'function') publicarLojaEmSegundoPlano();
+        mostrarNuvemshop(s);
+        const extra = (s.avisos_fotos || []).length ? ' ' + s.avisos_fotos.join(' ') : '';
+        document.getElementById('ns-texto').textContent = (s.capas_trocadas || s.fotos_removidas
+            ? `⭐ ${s.capas_trocadas} capa(s) igualada(s) e ${s.fotos_removidas} foto(s) repetida(s) removida(s). O site atualiza em 1 ou 2 minutos.`
+            : '⭐ As capas do site já estão iguais às da Nuvemshop.') + extra;
+    } catch (e) {
+        document.getElementById('ns-texto').textContent = '⚠️ Não foi possível igualar as capas: ' + e.message;
+    } finally {
+        botao.disabled = false;
+        botao.textContent = '⭐ Igualar capas com a Nuvemshop';
     }
 }
 

@@ -134,6 +134,36 @@ describe('trazer fotos da Nuvemshop', () => {
     expect(r.avisos_fotos.join(' ')).toMatch(/não consegui baixar/);
   });
 
+  test('igualar capas: a 1ª da Nuvemshop vira a capa do site e sai a cópia repetida da capa antiga', () => {
+    const g = conectado();
+    g.api('POST', '/api/nuvemshop/fotos'); // extras: caixas (72) e verso (73)
+    // na Nuvemshop a capa passou a ser uma foto oficial nova e a antiga (71) foi para a 2ª posição
+    const base = '//dcdn-us.mitiendanube.com/stores/001/products/';
+    g.estado.ns.produtos[0].images = [
+      { id: 80, position: 1, src: base + 'oficial.jpg' },
+      { id: 71, position: 2, src: base + 'principal.jpg' },
+      { id: 73, position: 3, src: base + 'verso.jpg' },
+    ];
+    g.estado.ns.imagens['https:' + base + 'oficial-1024-1024.jpg'] = Buffer.from([0xff, 0xd8, 0xff, 9]);
+    // o "Trazer fotos" de agora pularia a 1ª e traria a 71 (cópia da capa antiga do painel)
+    g.api('POST', '/api/nuvemshop/fotos');
+    expect(produto(g).fotos_extras).toHaveLength(3);
+    const capaAntiga = produto(g).foto_id;
+
+    const r = g.api('POST', '/api/nuvemshop/capas');
+    expect(r.capas_trocadas).toBe(1);
+    expect(r.fotos_removidas).toBe(1);
+    const p = produto(g);
+    expect(g.estado.drive.get(p.foto_id).bytes[3]).toBe(9); // capa = oficial
+    expect(p.fotos_extras.map((e) => e.id)[0]).toBe(capaAntiga); // capa antiga vira a 1ª extra
+    expect(p.fotos_extras).toHaveLength(3); // antiga + caixas + verso (a cópia 71 saiu)
+
+    // de novo: nada muda e o "Trazer fotos" não traz a oficial de volta
+    expect(g.api('POST', '/api/nuvemshop/capas').capas_trocadas).toBe(0);
+    expect(g.api('POST', '/api/nuvemshop/fotos').fotos_importadas).toBe(0); // nem a cópia da capa antiga
+    expect(produto(g).fotos_extras).toHaveLength(3);
+  });
+
   test('sem conexão com a Nuvemshop, avisa', () => {
     const g = ambiente();
     expect(() => g.api('POST', '/api/nuvemshop/fotos')).toThrow(/Conecte a Nuvemshop/);
