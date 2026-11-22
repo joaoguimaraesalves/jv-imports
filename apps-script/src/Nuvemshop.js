@@ -626,7 +626,7 @@ function nuvemshopImportarFotos_() {
   if (!nsCred_()) throw erro_('Conecte a Nuvemshop primeiro.');
   const produtos = transacao_(function (tx) {
     return tx.linhas('produtos').filter(function (p) { return p.ns_produto_id; })
-      .map(function (p) { return { id: p.id, nome: p.nome, ns: p.ns_produto_id, tem_principal: !!p.foto_id, ja: fotosExtras_(p).map(function (f) { return String(f.ns || ''); }), extras: fotosExtras_(p).length }; });
+      .map(function (p) { return { id: p.id, nome: p.nome, ns: p.ns_produto_id, tem_principal: !!p.foto_id, ja: fotosExtras_(p).map(function (f) { return String(f.ns || ''); }).concat(p.foto_ns ? [String(p.foto_ns)] : []), extras: fotosExtras_(p).length }; });
   }, true);
 
   const novos = {}; // produto → { principal, extras[] }

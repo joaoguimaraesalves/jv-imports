@@ -63,6 +63,7 @@ const ROTAS = [
   ['DELETE', /^produtos\/(\d+)\/foto$/, doArquivoLoja_('produtosFotoRemover_')],
   ['POST', /^produtos\/(\d+)\/fotos$/, doArquivoLoja_('produtosFotoExtraAdicionar_')],
   ['DELETE', /^produtos\/(\d+)\/fotos\/([\w-]+)$/, doArquivoLoja_('produtosFotoExtraRemover_')],
+  ['POST', /^produtos\/(\d+)\/fotos\/([\w-]+)\/capa$/, doArquivoLoja_('produtosFotoCapa_')],
   ['GET', /^loja\/config$/, doArquivoLoja_('lojaConfigLer_')],
   ['PUT', /^loja\/config$/, doArquivoLoja_('lojaConfigSalvar_')],
   ['GET', /^publicacao$/, doArquivoLoja_('publicacaoSituacao_'), SEM_TRANSACAO],

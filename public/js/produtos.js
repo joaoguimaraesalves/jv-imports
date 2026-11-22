@@ -329,6 +329,7 @@ function mostrarFotosExtras(produto) {
     const extras = produto.fotos_extras;
     document.getElementById('prod-fotos-extras-grade').innerHTML = extras.map(f => `
         <div class="foto-extra"><img src="${f.url}" alt="" loading="lazy">
+            <button type="button" class="foto-capa" title="Usar como capa (1ª foto do site)" onclick="usarFotoComoCapa(${Number(produto.id)}, '${String(f.id).replace(/[^\w-]/g, '')}')">★ Capa</button>
             <button type="button" title="Remover esta foto" onclick="removerFotoExtra(${Number(produto.id)}, '${String(f.id).replace(/[^\w-]/g, '')}')">×</button></div>`).join('')
         || '<span class="sem-extras">Nenhuma foto extra ainda.</span>';
     document.getElementById('prod-fotos-extras-input').value = '';
@@ -356,6 +357,20 @@ async function adicionarFotosExtras(event) {
     } catch (e) {
         alert('Não foi possível enviar a foto: ' + e.message);
     }
+    recarregarProdutoNoModal(id);
+}
+
+// Troca a capa pela foto escolhida (a capa antiga vira a 1ª foto extra; nada é apagado).
+async function usarFotoComoCapa(id, fotoId) {
+    const aviso = document.getElementById('prod-fotos-extras-aviso');
+    try {
+        aviso.textContent = 'Trocando a capa...';
+        await fetchJSON(`/api/produtos/${id}/fotos/${fotoId}/capa`, { method: 'POST' });
+        aviso.textContent = '✅ Capa trocada. O site atualiza em 1 ou 2 minutos.';
+    } catch (e) {
+        aviso.textContent = '⚠️ Não foi possível trocar a capa: ' + e.message;
+    }
+    if (typeof publicarLojaEmSegundoPlano === 'function') publicarLojaEmSegundoPlano();
     recarregarProdutoNoModal(id);
 }
 

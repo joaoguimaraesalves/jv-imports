@@ -139,3 +139,26 @@ describe('trazer fotos da Nuvemshop', () => {
     expect(() => g.api('POST', '/api/nuvemshop/fotos')).toThrow(/Conecte a Nuvemshop/);
   });
 });
+
+describe('usar foto extra como capa', () => {
+  test('troca a capa: a extra vira a 1ª foto e a capa antiga vira a 1ª extra (nada é apagado)', () => {
+    const g = ambiente();
+    g.api('POST', '/api/produtos/1/fotos', { foto: JPEG(2) });
+    g.api('POST', '/api/produtos/1/fotos', { foto: JPEG(3) });
+    g.ctx.publicarLojaAgora();
+    const antes = vitrine(g).produtos[0].fotos;
+    const [, segunda] = produto(g).fotos_extras;
+    g.api('POST', `/api/produtos/1/fotos/${segunda.id}/capa`);
+    const p = produto(g);
+    expect(p.fotos_extras).toHaveLength(2);
+    g.ctx.publicarLojaAgora();
+    const depois = vitrine(g).produtos[0].fotos;
+    // mesmas fotos (mesmas versões/chaves no KV), só muda a ordem
+    expect(depois.map(versao).sort()).toEqual(antes.map(versao).sort());
+    expect(versao(depois[0])).toBe(versao(antes[2]));
+    expect(versao(depois[1])).toBe(versao(antes[0]));
+    expect(vitrine(g).produtos[0].foto).toBe(depois[0]);
+    expect(g.estado.drive.get(segunda.id).lixeira).toBeFalsy();
+    expect(() => g.api('POST', '/api/produtos/1/fotos/nao-existe/capa')).toThrow(/não encontrada/);
+  });
+});

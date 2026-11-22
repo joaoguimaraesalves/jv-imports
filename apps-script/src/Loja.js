@@ -241,6 +241,7 @@ function produtosFotoSalvar_(tx, req) {
   apagarFotoDrive_(p.foto_id);
   p.foto_id = arquivo.getId();
   p.foto_em = agoraIso_();
+  p.foto_ns = null;
   tx.alterou('produtos');
   return { ok: true, foto_em: p.foto_em };
 }
@@ -273,12 +274,35 @@ function produtosFotoExtraRemover_(tx, req) {
   return { ok: true, fotos_extras: p.fotos_extras };
 }
 
+/** Usa uma foto extra como capa (principal): a capa antiga vira a 1ª extra, nada é apagado. */
+function produtosFotoCapa_(tx, req) {
+  const p = tx.porId('produtos', req.params[0]);
+  if (!p) throw erro_('Produto não encontrado');
+  const fotoId = String(req.params[1]);
+  const extras = fotosExtras_(p);
+  const i = extras.findIndex(function (f) { return f.id === fotoId; });
+  if (i < 0) throw erro_('Foto não encontrada');
+  const nova = extras.splice(i, 1)[0];
+  if (p.foto_id && p.foto_em) {
+    const antiga = { id: p.foto_id, em: p.foto_em };
+    if (p.foto_ns) antiga.ns = p.foto_ns;
+    extras.unshift(antiga);
+  }
+  p.foto_id = nova.id;
+  p.foto_em = nova.em;
+  p.foto_ns = nova.ns || null;
+  p.fotos_extras = extras;
+  tx.alterou('produtos');
+  return { ok: true, foto_em: p.foto_em, fotos_extras: extras };
+}
+
 function produtosFotoRemover_(tx, req) {
   const p = tx.porId('produtos', req.params[0]);
   if (!p) throw erro_('Produto não encontrado');
   apagarFotoDrive_(p.foto_id);
   p.foto_id = null;
   p.foto_em = null;
+  p.foto_ns = null;
   tx.alterou('produtos');
   return { ok: true };
 }
