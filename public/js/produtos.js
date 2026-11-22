@@ -339,7 +339,10 @@ function mostrarFotosExtras(produto) {
 async function recarregarProdutoNoModal(id) {
     await carregarProdutos(); // atualiza a tabela e a lista produtosCadastro
     const p = produtosCadastro.find(x => x.id === id);
-    if (p) mostrarFotosExtras(p);
+    if (!p) return;
+    mostrarFotosExtras(p);
+    // a capa pode ter mudado ("★ Capa"): atualiza a miniatura principal da janela
+    mostrarPreviewFoto(p.foto_url || (p.foto_em ? `/api/loja/foto/${p.id}?v=${encodeURIComponent(p.foto_em)}` : null));
 }
 
 async function adicionarFotosExtras(event) {
