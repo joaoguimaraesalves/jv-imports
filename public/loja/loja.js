@@ -103,6 +103,7 @@
         'JBL', 'Edifier', 'Haylou', 'Lenovo', 'Soundpeats', 'Samsung', 'Apple', 'Sony', 'Philips', 'Havit',
         'TRN', 'CCA', 'Moondrop', 'Tangzu', 'Truthear', 'Tranya', 'Awei', 'Lehmox', 'Kaidi'];
     const MARCA_POR_CHAVE = new Map(MARCAS.map((m) => [normalizar(m), m]));
+    MARCA_POR_CHAVE.set('redmi', 'Xiaomi'); // Redmi é linha da Xiaomi: aparece como Xiaomi (mais conhecida)
 
     function marcaDe(p) {
         for (const palavra of String(p.nome || '').split(/[\s/()-]+/)) {
@@ -168,7 +169,7 @@
     // Seção "Marcas.": a principal (QCY) em destaque, as outras em cards menores
     const MARCA_PRINCIPAL = 'QCY';
     // Logos em /loja/marca-<nome>.png (sem logo, mostra o nome escrito)
-    const LOGOS = new Set(['qcy', 'kz', 'mchose', 'redmi', 'essager']);
+    const LOGOS = new Set(['qcy', 'kz', 'mchose', 'xiaomi', 'essager']);
     const logoMarca = (m, classe) => {
         const k = normalizar(m);
         return LOGOS.has(k) ? `<img class="${classe}" src="/loja/marca-${k}.png" alt="${esc(m)}" loading="lazy" decoding="async">` : `<strong>${esc(m)}</strong>`;
