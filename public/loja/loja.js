@@ -170,9 +170,10 @@
     const MARCA_PRINCIPAL = 'QCY';
     // Logos em /loja/marca-<nome>.png (sem logo, mostra o nome escrito)
     const LOGOS = new Set(['qcy', 'kz', 'mchose', 'xiaomi', 'essager']);
+    const LOGOS_VERSAO = 2; // aumentar ao trocar uma logo (o navegador guarda as imagens por 24 h)
     const logoMarca = (m, classe) => {
         const k = normalizar(m);
-        return LOGOS.has(k) ? `<img class="${classe}" src="/loja/marca-${k}.png" alt="${esc(m)}" loading="lazy" decoding="async">` : `<strong>${esc(m)}</strong>`;
+        return LOGOS.has(k) ? `<img class="${classe}" src="/loja/marca-${k}.png?v=${LOGOS_VERSAO}" alt="${esc(m)}" loading="lazy" decoding="async">` : `<strong>${esc(m)}</strong>`;
     };
     function desenharMarcas() {
         const caixa = $('lista-marcas');
