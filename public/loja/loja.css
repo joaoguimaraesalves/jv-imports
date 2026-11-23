@@ -609,3 +609,7 @@ a.retirada-mapa:hover img { transform: scale(1.02); }
 .marca-mini img { width: 100%; height: 100%; object-fit: contain; }
 .marca-principal:hover { border-color: #5cc8ff; }
 @media (max-width: 560px) { .marca-principal { flex-direction: column; align-items: flex-start; } .marca-fotos { align-self: flex-end; } }
+/* Logos das marcas */
+.marca-logo { display: block; height: 40px; width: auto; max-width: 100%; object-fit: contain; object-position: left center; margin-bottom: 6px; }
+.marca-logo-grande { height: clamp(52px, 7vw, 72px); filter: brightness(0) invert(1); margin: 4px 0 2px; }
+@media (max-width: 560px) { .marca-logo { height: 30px; max-width: calc(100% - 22px); } .marca-logo.marca-logo-grande { height: 58px; max-width: 100%; } }

@@ -167,6 +167,12 @@
 
     // Seção "Marcas.": a principal (QCY) em destaque, as outras em cards menores
     const MARCA_PRINCIPAL = 'QCY';
+    // Logos em /loja/marca-<nome>.png (sem logo, mostra o nome escrito)
+    const LOGOS = new Set(['qcy', 'kz', 'mchose', 'redmi', 'essager']);
+    const logoMarca = (m, classe) => {
+        const k = normalizar(m);
+        return LOGOS.has(k) ? `<img class="${classe}" src="/loja/marca-${k}.png" alt="${esc(m)}" loading="lazy" decoding="async">` : `<strong>${esc(m)}</strong>`;
+    };
     function desenharMarcas() {
         const caixa = $('lista-marcas');
         if (!caixa) return;
@@ -184,12 +190,12 @@
         const qtd = (n) => `${n} ${n === 1 ? 'produto' : 'produtos'}`;
         caixa.innerHTML = marcas.map(([m, ps]) => {
             if (m !== MARCA_PRINCIPAL) {
-                return `<a class="marca-item" href="#produtos" data-ir-marca="${esc(m)}"><strong>${esc(m)}</strong><small>${qtd(ps.length)}</small>${seta}</a>`;
+                return `<a class="marca-item" href="#produtos" data-ir-marca="${esc(m)}" aria-label="${esc(m)}: ${qtd(ps.length)}">${logoMarca(m, 'marca-logo')}<small>${qtd(ps.length)}</small>${seta}</a>`;
             }
             const fotos = ps.filter((p) => p.foto).sort((a, b) => (b.disponivel - a.disponivel) || (b.mais_vendido ? 1 : 0) - (a.mais_vendido ? 1 : 0)).slice(0, 3)
                 .map((p) => `<span class="marca-mini"><img src="${esc(p.foto)}" alt="" loading="lazy" decoding="async"></span>`).join('');
             return `<a class="marca-item marca-principal" href="#produtos" data-ir-marca="${esc(m)}">
-                <span class="marca-texto"><span class="marca-selo">★ Nossa marca principal</span><strong>${esc(m)}</strong><small>${qtd(ps.length)} · fones originais, novos e lacrados</small><span class="marca-ver">Ver produtos ${seta}</span></span>
+                <span class="marca-texto"><span class="marca-selo">★ Nossa marca principal</span>${logoMarca(m, 'marca-logo marca-logo-grande')}<small>${qtd(ps.length)} · fones originais, novos e lacrados</small><span class="marca-ver">Ver produtos ${seta}</span></span>
                 <span class="marca-fotos">${fotos}</span></a>`;
         }).join('');
     }
