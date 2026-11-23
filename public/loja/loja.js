@@ -128,7 +128,7 @@
     function marcasDaCategoria() {
         const mapa = new Map();
         for (const p of estado.produtos) {
-            if (normalizar(p.categoria) !== estado.categoria) continue;
+            if (estado.categoria !== 'todas' && normalizar(p.categoria) !== estado.categoria) continue;
             const m = marcaDe(p) || 'Outras';
             mapa.set(m, (mapa.get(m) || 0) + 1);
         }
@@ -153,14 +153,45 @@
                 `<a class="cat-item" href="#produtos" data-cat="${esc(c.chave)}"><span><strong>${esc(c.rotulo)}</strong><small>${c.total} ${c.total === 1 ? 'produto' : 'produtos'}</small></span>${seta}</a>`).join('');
         }
 
-        // Dentro de Fones: filtro por marca (só aparece se houver mais de uma)
-        const marcas = estado.categoria !== 'todas' && temMarcas(estado.categoria) ? marcasDaCategoria() : [];
+        desenharMarcas();
+
+        // Filtro por marca (em Todos e em Fones; só aparece se houver mais de uma) (só aparece se houver mais de uma)
+        const marcas = estado.categoria === 'todas' || temMarcas(estado.categoria) ? marcasDaCategoria() : [];
         if (estado.marca !== 'todas' && !marcas.some(([m]) => m === estado.marca)) estado.marca = 'todas';
         const sub = $('marcas');
         sub.hidden = marcas.length < 2;
         sub.innerHTML = sub.hidden ? '' :
             chip('data-marca="todas"', 'Todas as marcas', null, estado.marca === 'todas') +
             marcas.map(([m, n]) => chip(`data-marca="${esc(m)}"`, m, n, m === estado.marca)).join('');
+    }
+
+    // Seção "Marcas.": a principal (QCY) em destaque, as outras em cards menores
+    const MARCA_PRINCIPAL = 'QCY';
+    function desenharMarcas() {
+        const caixa = $('lista-marcas');
+        if (!caixa) return;
+        const mapa = new Map();
+        for (const p of estado.produtos) {
+            const m = marcaDe(p);
+            if (!m) continue;
+            if (!mapa.has(m)) mapa.set(m, []);
+            mapa.get(m).push(p);
+        }
+        const marcas = [...mapa.entries()].sort((a, b) =>
+            (b[0] === MARCA_PRINCIPAL) - (a[0] === MARCA_PRINCIPAL) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
+        $('marcas-secao').hidden = marcas.length < 2;
+        const seta = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 17 17 7M8 7h9v9"/></svg>';
+        const qtd = (n) => `${n} ${n === 1 ? 'produto' : 'produtos'}`;
+        caixa.innerHTML = marcas.map(([m, ps]) => {
+            if (m !== MARCA_PRINCIPAL) {
+                return `<a class="marca-item" href="#produtos" data-ir-marca="${esc(m)}"><strong>${esc(m)}</strong><small>${qtd(ps.length)}</small>${seta}</a>`;
+            }
+            const fotos = ps.filter((p) => p.foto).sort((a, b) => (b.disponivel - a.disponivel) || (b.mais_vendido ? 1 : 0) - (a.mais_vendido ? 1 : 0)).slice(0, 3)
+                .map((p) => `<span class="marca-mini"><img src="${esc(p.foto)}" alt="" loading="lazy" decoding="async"></span>`).join('');
+            return `<a class="marca-item marca-principal" href="#produtos" data-ir-marca="${esc(m)}">
+                <span class="marca-texto"><span class="marca-selo">★ Nossa marca principal</span><strong>${esc(m)}</strong><small>${qtd(ps.length)} · fones originais, novos e lacrados</small><span class="marca-ver">Ver produtos ${seta}</span></span>
+                <span class="marca-fotos">${fotos}</span></a>`;
+        }).join('');
     }
 
     function filtrados() {
@@ -467,6 +498,11 @@
             estado.categoria = d.cat; estado.marca = 'todas'; desenharChips(); desenharGrade(); return;
         }
         if (d.marca) { estado.marca = d.marca; desenharChips(); desenharGrade(); return; }
+        if (d.irMarca) {
+            e.preventDefault();
+            estado.categoria = 'todas'; estado.marca = d.irMarca; estado.busca = ''; $('busca').value = '';
+            desenharChips(); desenharGrade(); $('produtos').scrollIntoView({ behavior: 'smooth' }); return;
+        }
         if (alvo.hasAttribute('data-pronta')) { estado.soDisponiveis = !estado.soDisponiveis; desenharChips(); desenharGrade(); return; }
         if (d.menos) return mudarQtd(Number(d.menos), -1);
         if (d.mais) return mudarQtd(Number(d.mais), +1);

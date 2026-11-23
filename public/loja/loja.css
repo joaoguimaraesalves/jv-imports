@@ -583,3 +583,29 @@ a.retirada-mapa img { width: 100%; height: 100%; object-fit: cover; transition: 
 a.retirada-mapa:hover img { transform: scale(1.02); }
 .mapa-abrir { position: absolute; top: 14px; right: 14px; background: rgba(255, 255, 255, 0.94); color: #16131d; font-weight: 700; font-size: 0.82rem; padding: 8px 12px; border-radius: 999px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
 @media (min-width: 900px) { .retirada-in { align-items: center; } }
+
+/* ---------- Marcas (QCY em destaque) ---------- */
+.lista-marcas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 900px) { .lista-marcas { grid-template-columns: repeat(4, 1fr); } }
+.marca-item { position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-height: 120px; padding: 18px;
+    border: 1px solid var(--borda); border-radius: 18px; background: var(--superficie); color: var(--texto); text-decoration: none; transition: border-color .2s, transform .2s; }
+.marca-item > svg { position: absolute; top: 16px; right: 16px; color: var(--texto-3); transition: color .2s; }
+.marca-item strong { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.6rem; letter-spacing: -0.03em; line-height: 1; }
+.marca-item small { color: var(--texto-3); font-size: 0.82rem; }
+.marca-item:hover { border-color: var(--azul); transform: translateY(-2px); }
+.marca-item:hover > svg { color: var(--azul); }
+.marca-principal { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; gap: 18px; min-height: 0; padding: 26px;
+    background: radial-gradient(600px 300px at 90% 0%, rgba(10, 132, 240, 0.35), transparent 70%), #0b0f17; border-color: #0b0f17; color: #ececee; overflow: hidden; }
+@media (min-width: 900px) { .marca-principal { grid-column: span 2; grid-row: span 2; } }
+.marca-texto { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.marca-selo { align-self: flex-start; font-size: 0.75rem; font-weight: 700; color: #5cc8ff; background: rgba(92, 200, 255, 0.12); border: 1px solid rgba(92, 200, 255, 0.3); padding: 4px 10px; border-radius: 999px; }
+.marca-principal strong { font-size: clamp(2.6rem, 6vw, 3.6rem); }
+.marca-principal small { color: #a9a7b3; max-width: 30ch; }
+.marca-ver { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 700; font-size: 0.92rem; color: #5cc8ff; }
+.marca-fotos { display: flex; flex-shrink: 0; }
+.marca-mini { width: clamp(70px, 11vw, 120px); aspect-ratio: 1; border-radius: 14px; background: #fff; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.marca-mini + .marca-mini { margin-left: -18px; }
+.marca-mini:nth-child(2) { transform: translateY(-10px); }
+.marca-mini img { width: 100%; height: 100%; object-fit: contain; }
+.marca-principal:hover { border-color: #5cc8ff; }
+@media (max-width: 560px) { .marca-principal { flex-direction: column; align-items: flex-start; } .marca-fotos { align-self: flex-end; } }
