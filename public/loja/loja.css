@@ -435,6 +435,22 @@ dialog::backdrop { background: rgba(2, 4, 8, 0.72); backdrop-filter: blur(4px); 
 .hero::before { display: none; }
 .hero-in { position: relative; max-width: 1180px; margin: 0 auto; padding: 64px var(--lado) 56px; min-height: min(78vh, 640px);
     display: flex; flex-direction: column; justify-content: center; }
+/* Banner (o mesmo da Nuvemshop): fotos reais à direita, bordas esfumadas no fundo escuro */
+.hero { position: relative; isolation: isolate; background: #05080f; }
+.hero::before {
+    display: block; content: ''; position: absolute; inset: 0; width: auto; height: auto; transform: none; z-index: -1; pointer-events: none;
+    background: url('/loja/banner.jpg') right -40px center / min(1150px, 80vw) auto no-repeat;
+    -webkit-mask-image: linear-gradient(90deg, transparent calc(100% - min(1150px, 80vw) + 40px), #000 calc(100% - min(1150px, 80vw) + 260px)),
+        linear-gradient(180deg, transparent calc(50% - min(1150px, 80vw) * 0.1875 + 10px), #000 calc(50% - min(1150px, 80vw) * 0.1875 + 110px),
+            #000 calc(50% + min(1150px, 80vw) * 0.1875 - 110px), transparent calc(50% + min(1150px, 80vw) * 0.1875 - 10px));
+    -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.hero-local { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }
+@media (max-width: 899px) {
+    .hero::before { background: url('/loja/banner-celular.jpg') center bottom / 100% auto no-repeat;
+        -webkit-mask-image: linear-gradient(180deg, transparent 35%, #000 60%); mask-image: linear-gradient(180deg, transparent 35%, #000 60%); }
+    .hero .hero-in { min-height: 0; justify-content: flex-start; padding-bottom: calc(100vw * 0.62); }
+}
 .hero h1 { font-family: var(--fonte-titulo); font-weight: 800; font-size: clamp(2.8rem, 9vw, 5.6rem); line-height: 0.98; letter-spacing: -0.045em; color: #ececee; }
 .hero h1 .destaque { color: #5cc8ff; }
 .hero-sub { color: #c4c2cc; font-size: 1.05rem; margin-top: 22px; max-width: 520px; line-height: 1.6; }
